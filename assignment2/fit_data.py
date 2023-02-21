@@ -5,13 +5,15 @@ import time
 import losses
 from pytorch3d.utils import ico_sphere
 from r2n2_custom import R2N2
-from pytorch3d.ops import sample_points_from_meshes
+from pytorch3d.ops import sample_points_from_meshes, cubify
 from pytorch3d.structures import Meshes
 import dataset_location
 import torch
 
-
-
+import imageio
+import pytorch3d
+from utils import *
+import numpy as np
 
 
 
@@ -121,7 +123,6 @@ def train_model(args):
         if torch.is_tensor(feed[k]):
             feed_cuda[k] = feed[k].to(args.device).float()
 
-
     if args.type == "vox":
         # initialization
         voxels_src = torch.rand(feed_cuda['voxels'].shape,requires_grad=True, device=args.device)
@@ -130,8 +131,46 @@ def train_model(args):
 
         # fitting
         fit_voxel(voxels_src, voxels_tgt, args)
+        num_views = 24
+        voxels_src = cubify(voxels_src, 1)
+        voxels_tgt = cubify(voxels_tgt, 1)
+        
+        tgt_verts = voxels_tgt.verts_list()[0]
+        tgt_faces = voxels_tgt.faces_list()[0]
+        textures = pytorch3d.renderer.TexturesVertex(tgt_verts.unsqueeze(0))
+        tgt_mesh = pytorch3d.structures.Meshes(
+            verts=[tgt_verts],   
+            faces=[tgt_faces],
+            textures = textures
+        )
 
+        src_verts = voxels_src.verts_list()[0]
+        src_faces = voxels_src.faces_list()[0]
+        textures = pytorch3d.renderer.TexturesVertex(src_verts.unsqueeze(0))
+        src_mesh = pytorch3d.structures.Meshes(
+            verts=[src_verts],   
+            faces=[src_faces],
+            textures = textures
+        )
 
+        R, T = pytorch3d.renderer.look_at_view_transform(
+            dist=3,
+            elev=0,
+            azim=np.linspace(-180, 180, num_views, endpoint=False),
+        )
+        many_cameras = pytorch3d.renderer.FoVPerspectiveCameras(
+            R=R,
+            T=T,
+            device=args.device
+        )
+        renderer = get_mesh_renderer(device=args.device)
+        my_images = renderer(tgt_mesh.extend(num_views), cameras=many_cameras)
+        my_images = my_images.cpu().numpy()
+        imageio.mimsave("submissions/target_vox.gif", my_images, fps=12)
+        my_images = renderer(src_mesh.extend(num_views), cameras=many_cameras)
+        my_images = my_images.cpu().numpy()
+        imageio.mimsave("submissions/source_vox.gif", my_images, fps=12)
+    
     elif args.type == "point":
         # initialization
         pointclouds_src = torch.randn([1,args.n_points,3],requires_grad=True, device=args.device)
@@ -148,13 +187,8 @@ def train_model(args):
         mesh_tgt = Meshes(verts=[feed_cuda['verts']], faces=[feed_cuda['faces']])
 
         # fitting
-        fit_mesh(mesh_src, mesh_tgt, args)        
-
-
+        fit_mesh(mesh_src, mesh_tgt, args)  
     
-    
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Model Fit', parents=[get_args_parser()])
     args = parser.parse_args()

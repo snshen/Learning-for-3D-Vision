@@ -4,8 +4,9 @@ import torch
 def voxel_loss(voxel_src,voxel_tgt):
 	# voxel_src: b x h x w x d
 	# voxel_tgt: b x h x w x d
-	# loss = 
-	# implement some loss for binary voxel grids
+	voxel_src.unsqueeze(1)
+	voxel_tgt.type(dtype=torch.LongTensor)
+	loss = torch.nn.functional.cross_entropy(voxel_src, voxel_tgt)
 	return loss
 
 def chamfer_loss(point_cloud_src,point_cloud_tgt):
