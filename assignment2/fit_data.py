@@ -95,11 +95,11 @@ def fit_voxel(voxels_src, voxels_tgt, args):
     for step in range(start_iter, args.max_iter):
         iter_start_time = time.time()
 
-        loss = losses.voxel_loss(voxels_src,voxels_tgt)
+        loss = losses.voxel_loss(voxels_src, voxels_tgt, fit=True)
 
         optimizer.zero_grad()
         loss.backward()
-        optimizer.step()        
+        optimizer.step()  
 
         total_time = time.time() - start_time
         iter_time = time.time() - iter_start_time
@@ -131,7 +131,6 @@ def train_model(args):
 
         # fitting
         fit_voxel(voxels_src, voxels_tgt, args)
-        
         render_vox(voxels_src, voxels_tgt = voxels_tgt)
     
     elif args.type == "point":

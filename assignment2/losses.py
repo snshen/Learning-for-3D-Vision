@@ -3,13 +3,13 @@ from pytorch3d.ops.knn import knn_gather, knn_points
 from pytorch3d.loss import mesh_laplacian_smoothing
 
 # define losses
-def voxel_loss(voxel_src,voxel_tgt):
+def voxel_loss(voxel_src,voxel_tgt, fit = False):
 	# voxel_src: b x h x w x d
 	# voxel_tgt: b x h x w x d
 	voxel_src.unsqueeze(1)
 	voxel_tgt.type(dtype=torch.LongTensor)
-	# loss = torch.nn.functional.cross_entropy(voxel_src, voxel_tgt)
-	loss = torch.nn.functional.binary_cross_entropy(voxel_src, voxel_tgt)
+	if fit: loss = torch.nn.functional.cross_entropy(voxel_src, voxel_tgt)
+	else: loss = torch.nn.functional.binary_cross_entropy(voxel_src, voxel_tgt)
 	return loss
 
 def chamfer_loss(point_cloud_src, point_cloud_tgt):

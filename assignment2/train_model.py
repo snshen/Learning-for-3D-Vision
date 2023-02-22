@@ -7,6 +7,7 @@ from  pytorch3d.datasets.r2n2.utils import collate_batched_R2N2
 import dataset_location
 from pytorch3d.ops import sample_points_from_meshes
 import losses
+from eval_model import evaluate_in_train
 
 
 def get_args_parser():
@@ -15,7 +16,8 @@ def get_args_parser():
     parser.add_argument('--arch', default='resnet18', type=str)
     parser.add_argument('--lr', default=1e-3, type=str)
     parser.add_argument('--max_iter', default=10000, type=str)
-    parser.add_argument('--log_freq', default=1000, type=str)
+    parser.add_argument('--log_freq', default=100, type=str)
+    parser.add_argument('--vis_freq', default=100, type=int)
     parser.add_argument('--batch_size', default=64, type=str)
     parser.add_argument('--num_workers', default=0, type=str)
     parser.add_argument('--type', default='vox', choices=['vox', 'point', 'mesh'], type=str)
@@ -25,7 +27,8 @@ def get_args_parser():
     parser.add_argument('--save_freq', default=10000, type=int)    
     parser.add_argument('--device', default='cuda', type=str) 
     parser.add_argument('--load_feat', action='store_true') 
-    parser.add_argument('--load_checkpoint', action='store_true')            
+    parser.add_argument('--load_checkpoint', action='store_true')    
+    parser.add_argument('--with_eval', action='store_true')           
     return parser
 
 def preprocess(feed_dict,args):
@@ -44,8 +47,6 @@ def preprocess(feed_dict,args):
         return feats.to(args.device), ground_truth_3d.to(args.device)
     else:
         return images.to(args.device), ground_truth_3d.to(args.device)
-
-
 
 
 def calculate_loss(predictions, ground_truth, args):
@@ -132,7 +133,99 @@ def train_model(args):
 
     print('Done!')
 
+
+
+def train_with_eval(args):
+    r2n2_dataset_t = R2N2("train", dataset_location.SHAPENET_PATH, dataset_location.R2N2_PATH, dataset_location.SPLITS_PATH, return_voxels=True, return_feats=args.load_feat)
+
+    t_loader = torch.utils.data.DataLoader(
+        r2n2_dataset_t,
+        batch_size=args.batch_size,
+        num_workers=args.num_workers,
+        collate_fn=collate_batched_R2N2,
+        pin_memory=True,
+        shuffle = True,
+        drop_last=True)
+    train_loader = iter(t_loader)
+
+    r2n2_dataset_e = R2N2("test", dataset_location.SHAPENET_PATH, dataset_location.R2N2_PATH, dataset_location.SPLITS_PATH, return_voxels=True, return_feats=args.load_feat)
+
+    e_loader = torch.utils.data.DataLoader(
+        r2n2_dataset_e,
+        batch_size=args.batch_size,
+        num_workers=args.num_workers,
+        collate_fn=collate_batched_R2N2,
+        pin_memory=True,
+        drop_last=True)
+
+
+    model =  SingleViewto3D(args)
+    model.to(args.device)
+    model.train()
+
+    # ============ preparing optimizer ... ============
+    optimizer = torch.optim.Adam(model.parameters(), lr = args.lr)  # to use with ViTs
+    decoder_lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
+                                                                milestones=[],
+                                                                gamma=cfg.TRAIN.GAMMA)
+    start_iter = 0
+    start_time = time.time()
+
+    if args.load_checkpoint:
+        checkpoint = torch.load(f'checkpoint_{args.type}.pth')
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        start_iter = checkpoint['step']
+        print(f"Succesfully loaded iter {start_iter}")
+    
+    print("Starting training !")
+    for step in range(start_iter, args.max_iter):
+        iter_start_time = time.time()
+
+        if step % len(train_loader) == 0: #restart after one epoch
+            train_loader = iter(t_loader)
+
+        read_start_time = time.time()
+
+        feed_dict = next(train_loader)
+
+        images_gt, ground_truth_3d = preprocess(feed_dict,args)
+        read_time = time.time() - read_start_time
+
+        prediction_3d = model(images_gt, args)
+        
+        loss = calculate_loss(prediction_3d, ground_truth_3d, args)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()        
+
+        total_time = time.time() - start_time
+        iter_time = time.time() - iter_start_time
+
+        loss_vis = loss.cpu().item()
+
+        if (step % args.save_freq) == 0:
+            torch.save({
+                'step': step,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict()
+                }, f'checkpoint_{args.type}.pth')
+        
+        if (step % args.vis_freq) == 0:
+            eval_loader = iter(e_loader)
+
+            model.train()
+            
+
+        print("[%4d/%4d]; ttime: %.0f (%.2f, %.2f); loss: %.3f" % (step, args.max_iter, total_time, read_time, iter_time, loss_vis))
+
+    print('Done!')
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Singleto3D', parents=[get_args_parser()])
     args = parser.parse_args()
+    if args.with_eval:
+        train_with_eval(args)
     train_model(args)
+    

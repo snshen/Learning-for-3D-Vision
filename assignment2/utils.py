@@ -85,27 +85,39 @@ def get_mesh_renderer(image_size=512, lights=None, device=None):
     return renderer
 
 
-def render_vox(voxels_src, voxels_tgt = None, src_path = "submissions/source_vox.gif", tgt_path = "submissions/target_vox.gif", num_views = 24):
+def render_vox(voxels_src, voxels_tgt = None, mesh_tgt = None, src_path = "submissions/source_vox.gif", tgt_path = "submissions/target_vox.gif", num_views = 24):
+#  def render_vox(voxels_src, voxels_tgt = None, src_path = "submissions/source_vox.gif", tgt_path = "submissions/target_vox.gif", num_views = 24):
     
     R, T = look_at_view_transform(dist=3, elev=0, azim=np.linspace(-180, 180, num_views, endpoint=False))
     many_cameras = FoVPerspectiveCameras(R=R, T=T, device=voxels_src.device)
     renderer = get_mesh_renderer(device=voxels_src.device)
+
     voxels_src = cubify(voxels_src, 0.5)
     src_verts = voxels_src.verts_list()[0]
     src_faces = voxels_src.faces_list()[0]
     textures = TexturesVertex(src_verts.unsqueeze(0))
     src_mesh = Meshes(verts=[src_verts], faces=[src_faces], textures = textures)
-    
+
     my_images = renderer(src_mesh.extend(num_views), cameras=many_cameras)
     my_images = my_images.cpu().detach().numpy()
     imageio.mimsave(src_path, my_images, fps=12)
 
     if voxels_tgt is not None:
-        voxels_tgt = cubify(voxels_tgt, 1)
+        voxels_tgt = cubify(voxels_tgt, 0.5)
         tgt_verts = voxels_tgt.verts_list()[0]
         tgt_faces = voxels_tgt.faces_list()[0]
         textures = TexturesVertex(tgt_verts.unsqueeze(0))
         tgt_mesh = Meshes(verts=[tgt_verts], faces=[tgt_faces], textures = textures)
+        
+        my_images = renderer(tgt_mesh.extend(num_views), cameras=many_cameras)
+        my_images = my_images.cpu().detach().numpy()
+        imageio.mimsave(tgt_path, my_images, fps=12)
+    
+    elif mesh_tgt is not None:
+        tgt_verts = mesh_tgt.verts_list()[0]
+        tgt_faces = mesh_tgt.faces_list()[0]
+        textures = TexturesVertex(tgt_verts.unsqueeze(0))
+        tgt_mesh = Meshes(verts=[tgt_verts], faces=[tgt_faces], textures = textures).to(voxels_src.device)
         
         my_images = renderer(tgt_mesh.extend(num_views), cameras=many_cameras)
         my_images = my_images.cpu().detach().numpy()

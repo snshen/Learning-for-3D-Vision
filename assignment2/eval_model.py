@@ -89,7 +89,7 @@ def evaluate(predictions, mesh_gt, thresholds, args):
     if args.type == "vox":
         voxels_src = predictions
         H,W,D = voxels_src.shape[2:]
-        print(voxels_src.shape)
+        
         vertices_src, faces_src = mcubes.marching_cubes(voxels_src.detach().cpu().squeeze().numpy(), isovalue=0.5)
         vertices_src = torch.tensor(vertices_src).float()
         faces_src = torch.tensor(faces_src.astype(int))
@@ -105,7 +105,6 @@ def evaluate(predictions, mesh_gt, thresholds, args):
     
     metrics = compute_sampling_metrics(pred_points, gt_points, thresholds)
     return metrics
-
 
 
 def evaluate_model(args):
@@ -162,7 +161,7 @@ def evaluate_model(args):
         # TODO:
         if (step % args.vis_freq) == 0:
             # visualization block
-            render_vox(predictions.squeeze(1), src_path = "submissions/model_vox.gif")
+            render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "submissions/model_vox.gif", tgt_path = "submissions/model_vox_t.gif" )
             # plt.imsave(f'vis/{step}_{args.type}.png', rend)
       
 
@@ -183,9 +182,9 @@ def evaluate_model(args):
     save_plot(thresholds, avg_f1_score,  args)
     print('Done!')
 
+
 def evaluate_in_train(args, model, eval_loader):
     
-
     model.eval()
     start_iter = 0
     start_time = time.time()
@@ -196,16 +195,14 @@ def evaluate_in_train(args, model, eval_loader):
     avg_f1_score = []
     avg_p_score = []
     avg_r_score = []
-
+    
     print("Starting evaluating !")
     max_iter = len(eval_loader)
     for step in range(start_iter, max_iter):
         iter_start_time = time.time()
-
         read_start_time = time.time()
 
         feed_dict = next(eval_loader)
-
         images_gt, mesh_gt = preprocess(feed_dict, args)
 
         read_time = time.time() - read_start_time
@@ -220,9 +217,8 @@ def evaluate_in_train(args, model, eval_loader):
         # TODO:
         if (step % args.vis_freq) == 0:
             # visualization block
-            render_vox(predictions.squeeze(1), src_path = "submissions/model_vox.gif")
+            render_vox(predictions.squeeze(1), src_path = "submissions/model_vox.gif", tgt_path = "submissions/model_vox_t.gif" )
             # plt.imsave(f'vis/{step}_{args.type}.png', rend)
-      
 
         total_time = time.time() - start_time
         iter_time = time.time() - iter_start_time
@@ -235,9 +231,7 @@ def evaluate_in_train(args, model, eval_loader):
 
         print("[%4d/%4d]; ttime: %.0f (%.2f, %.2f); F1@0.05: %.3f; Avg F1@0.05: %.3f" % (step, max_iter, total_time, read_time, iter_time, f1_05, torch.tensor(avg_f1_score_05).mean()))
     
-
     avg_f1_score = torch.stack(avg_f1_score).mean(0)
-
     save_plot(thresholds, avg_f1_score,  args)
     print('Done!')
 
