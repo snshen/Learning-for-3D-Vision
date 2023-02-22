@@ -13,10 +13,10 @@ def get_args_parser():
     parser = argparse.ArgumentParser('Singleto3D', add_help=False)
     # Model parameters
     parser.add_argument('--arch', default='resnet18', type=str)
-    parser.add_argument('--lr', default=4e-4, type=str)
+    parser.add_argument('--lr', default=1e-3, type=str)
     parser.add_argument('--max_iter', default=10000, type=str)
     parser.add_argument('--log_freq', default=1000, type=str)
-    parser.add_argument('--batch_size', default=2, type=str)
+    parser.add_argument('--batch_size', default=64, type=str)
     parser.add_argument('--num_workers', default=0, type=str)
     parser.add_argument('--type', default='vox', choices=['vox', 'point', 'mesh'], type=str)
     parser.add_argument('--n_points', default=5000, type=int)
@@ -50,7 +50,7 @@ def preprocess(feed_dict,args):
 
 def calculate_loss(predictions, ground_truth, args):
     if args.type == 'vox':
-        loss = losses.voxel_loss(predictions,ground_truth)
+        loss = losses.voxel_loss(predictions.permute(1,0,2,3,4),ground_truth.permute(1,0,2,3,4))
     elif args.type == 'point':
         loss = losses.chamfer_loss(predictions, ground_truth)
     elif args.type == 'mesh':
@@ -60,7 +60,8 @@ def calculate_loss(predictions, ground_truth, args):
         loss_reg = losses.chamfer_loss(sample_pred, sample_trg)
         loss_smooth = losses.smoothness_loss(predictions)
 
-        loss = args.w_chamfer * loss_reg + args.w_smooth * loss_smooth        
+        loss = args.w_chamfer * loss_reg + args.w_smooth * loss_smooth   
+
     return loss
 
 
@@ -108,7 +109,7 @@ def train_model(args):
         read_time = time.time() - read_start_time
 
         prediction_3d = model(images_gt, args)
-
+        
         loss = calculate_loss(prediction_3d, ground_truth_3d, args)
 
         optimizer.zero_grad()

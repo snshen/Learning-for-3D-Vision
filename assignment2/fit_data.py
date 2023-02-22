@@ -131,9 +131,6 @@ def train_model(args):
 
         # fitting
         fit_voxel(voxels_src, voxels_tgt, args)
-
-        voxels_src = cubify(voxels_src, 1)
-        voxels_tgt = cubify(voxels_tgt, 1)
         
         render_vox(voxels_src, voxels_tgt = voxels_tgt)
     
@@ -145,7 +142,7 @@ def train_model(args):
 
         # fitting
         fit_pointcloud(pointclouds_src, pointclouds_tgt, args)        
-        render_cloud(pointclouds_src, tgt_cloud = pointclouds_tgt, radius = 0.0)
+        render_cloud(pointclouds_src, tgt_cloud = pointclouds_tgt, radius = 0.02)
     
     elif args.type == "mesh":
         # initialization

@@ -14,6 +14,7 @@ from pytorch3d.renderer import (
 )
 from pytorch3d.structures import Meshes, Pointclouds
 from pytorch3d.io import load_obj
+from pytorch3d.ops import cubify
 import numpy as np
 import imageio
 import torch
@@ -89,7 +90,7 @@ def render_vox(voxels_src, voxels_tgt = None, src_path = "submissions/source_vox
     R, T = look_at_view_transform(dist=3, elev=0, azim=np.linspace(-180, 180, num_views, endpoint=False))
     many_cameras = FoVPerspectiveCameras(R=R, T=T, device=voxels_src.device)
     renderer = get_mesh_renderer(device=voxels_src.device)
-
+    voxels_src = cubify(voxels_src, 0.5)
     src_verts = voxels_src.verts_list()[0]
     src_faces = voxels_src.faces_list()[0]
     textures = TexturesVertex(src_verts.unsqueeze(0))
@@ -100,6 +101,7 @@ def render_vox(voxels_src, voxels_tgt = None, src_path = "submissions/source_vox
     imageio.mimsave(src_path, my_images, fps=12)
 
     if voxels_tgt is not None:
+        voxels_tgt = cubify(voxels_tgt, 1)
         tgt_verts = voxels_tgt.verts_list()[0]
         tgt_faces = voxels_tgt.faces_list()[0]
         textures = TexturesVertex(tgt_verts.unsqueeze(0))

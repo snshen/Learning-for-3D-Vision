@@ -19,28 +19,35 @@ class SingleViewto3D(nn.Module):
         if args.type == "vox":
             # Input: b x 512
             # Output: b x 1 x 32 x 32 x 32
+            self.layer0 = torch.nn.Sequential(
+                torch.nn.Linear(512, 2048)
+                # torch.nn.Linear(2048, 1024),
+                # torch.nn.Linear(1024, 512),
+                # torch.nn.Linear(512, 128),
+                # torch.nn.Linear(128, 128)
+            )
             self.layer1 = torch.nn.Sequential(
+                torch.nn.ConvTranspose3d(256, 128, kernel_size=4, stride=2, bias=False, padding=1),
+                torch.nn.BatchNorm3d(128),
+                torch.nn.ReLU()
+            )
+            self.layer2 = torch.nn.Sequential(
+                torch.nn.ConvTranspose3d(128, 64, kernel_size=4, stride=2, bias=False, padding=1),
+                torch.nn.BatchNorm3d(64),
+                torch.nn.ReLU()
+            )
+            self.layer3 = torch.nn.Sequential(
                 torch.nn.ConvTranspose3d(64, 32, kernel_size=4, stride=2, bias=False, padding=1),
                 torch.nn.BatchNorm3d(32),
                 torch.nn.ReLU()
             )
-            self.layer2 = torch.nn.Sequential(
-                torch.nn.ConvTranspose3d(32, 16, kernel_size=4, stride=2, bias=False, padding=1),
-                torch.nn.BatchNorm3d(16),
-                torch.nn.ReLU()
-            )
-            self.layer3 = torch.nn.Sequential(
-                torch.nn.ConvTranspose3d(16, 8, kernel_size=4, stride=2, bias=False, padding=1),
+            self.layer4 = torch.nn.Sequential(
+                torch.nn.ConvTranspose3d(32, 8, kernel_size=4, stride=2, bias=False, padding=1),
                 torch.nn.BatchNorm3d(8),
                 torch.nn.ReLU()
             )
-            self.layer4 = torch.nn.Sequential(
-                torch.nn.ConvTranspose3d(8, 4, kernel_size=4, stride=2, bias=False, padding=1),
-                torch.nn.BatchNorm3d(4),
-                torch.nn.ReLU()
-            )
             self.layer5 = torch.nn.Sequential(
-                torch.nn.ConvTranspose3d(4, 1, kernel_size=1, bias=False),
+                torch.nn.ConvTranspose3d(8, 1, kernel_size=1, bias=False),
                 torch.nn.Sigmoid()
             )
             # self.decoder =             
@@ -76,7 +83,9 @@ class SingleViewto3D(nn.Module):
         # call decoder
         if args.type == "vox":
             # for features in image_features:
-            gen_volume = encoded_feat.view(-1, 64, 2, 2, 2)
+            # gen_volume = encoded_feat.view(-1, 64, 2, 2, 2)
+            gen_volume = self.layer0(encoded_feat)
+            gen_volume = gen_volume.view(-1, 256, 2, 2, 2)
             # print(gen_volume.size())   # torch.Size([batch_size, 2048, 2, 2, 2])
             gen_volume = self.layer1(gen_volume)
             # print(gen_volume.size())   # torch.Size([batch_size, 512, 4, 4, 4])
