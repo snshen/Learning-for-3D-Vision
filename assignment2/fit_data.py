@@ -145,7 +145,7 @@ def train_model(args):
 
         # fitting
         fit_pointcloud(pointclouds_src, pointclouds_tgt, args)        
-        render_cloud(pointclouds_src, tgt_cloud = pointclouds_tgt, radius = 0.02)
+        render_cloud(pointclouds_src, tgt_cloud = pointclouds_tgt, radius = 0.0)
     
     elif args.type == "mesh":
         # initialization

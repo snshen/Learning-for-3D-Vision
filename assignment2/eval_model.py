@@ -157,10 +157,10 @@ def evaluate_model(args):
         metrics = evaluate(predictions, mesh_gt, thresholds, args)
 
         # TODO:
-        # if (step % args.vis_freq) == 0:
-        #     # visualization block
-        #     #  rend = 
-        #     plt.imsave(f'vis/{step}_{args.type}.png', rend)
+        if (step % args.vis_freq) == 0:
+            # visualization block
+            render_vox(voxels_src, voxels_tgt = None, src_path = "submissions/source_vox.gif", tgt_path = "submissions/target_vox.gif", num_views = 24):
+            # plt.imsave(f'vis/{step}_{args.type}.png', rend)
       
 
         total_time = time.time() - start_time

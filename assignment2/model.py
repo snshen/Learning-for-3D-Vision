@@ -15,14 +15,34 @@ class SingleViewto3D(nn.Module):
             self.encoder = torch.nn.Sequential(*(list(vision_model.children())[:-1]))
             self.normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
 
-
         # define decoder
         if args.type == "vox":
             # Input: b x 512
             # Output: b x 1 x 32 x 32 x 32
-            
-            pass
-            # TODO:
+            self.layer1 = torch.nn.Sequential(
+                torch.nn.ConvTranspose3d(64, 32, kernel_size=4, stride=2, bias=False, padding=1),
+                torch.nn.BatchNorm3d(32),
+                torch.nn.ReLU()
+            )
+            self.layer2 = torch.nn.Sequential(
+                torch.nn.ConvTranspose3d(32, 16, kernel_size=4, stride=2, bias=False, padding=1),
+                torch.nn.BatchNorm3d(16),
+                torch.nn.ReLU()
+            )
+            self.layer3 = torch.nn.Sequential(
+                torch.nn.ConvTranspose3d(16, 8, kernel_size=4, stride=2, bias=False, padding=1),
+                torch.nn.BatchNorm3d(8),
+                torch.nn.ReLU()
+            )
+            self.layer4 = torch.nn.Sequential(
+                torch.nn.ConvTranspose3d(8, 4, kernel_size=4, stride=2, bias=False, padding=1),
+                torch.nn.BatchNorm3d(4),
+                torch.nn.ReLU()
+            )
+            self.layer5 = torch.nn.Sequential(
+                torch.nn.ConvTranspose3d(4, 1, kernel_size=1, bias=False),
+                torch.nn.Sigmoid()
+            )
             # self.decoder =             
         elif args.type == "point":
             # Input: b x 512
@@ -55,8 +75,20 @@ class SingleViewto3D(nn.Module):
 
         # call decoder
         if args.type == "vox":
-            # TODO:
-            # voxels_pred =             
+            # for features in image_features:
+            gen_volume = encoded_feat.view(-1, 64, 2, 2, 2)
+            # print(gen_volume.size())   # torch.Size([batch_size, 2048, 2, 2, 2])
+            gen_volume = self.layer1(gen_volume)
+            # print(gen_volume.size())   # torch.Size([batch_size, 512, 4, 4, 4])
+            gen_volume = self.layer2(gen_volume)
+            # print(gen_volume.size())   # torch.Size([batch_size, 128, 8, 8, 8])
+            gen_volume = self.layer3(gen_volume)
+            # print(gen_volume.size())   # torch.Size([batch_size, 32, 16, 16, 16])
+            gen_volume = self.layer4(gen_volume)
+            # print(gen_volume.size())   # torch.Size([batch_size, 8, 32, 32, 32])
+            voxels_pred = self.layer5(gen_volume)
+            # print(gen_volume.size())   # torch.Size([batch_size, 1, 32, 32, 32])
+                 
             return voxels_pred
 
         elif args.type == "point":
