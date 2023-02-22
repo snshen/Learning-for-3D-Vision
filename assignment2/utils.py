@@ -8,8 +8,15 @@ from pytorch3d.renderer import (
     PointsRenderer,
     PointsRasterizer,
     HardPhongShader,
+    FoVPerspectiveCameras,
+    TexturesVertex,
+    look_at_view_transform
 )
+from pytorch3d.structures import Meshes, Pointclouds
 from pytorch3d.io import load_obj
+import numpy as np
+import imageio
+import torch
 
 
 def get_device():
@@ -77,50 +84,78 @@ def get_mesh_renderer(image_size=512, lights=None, device=None):
     return renderer
 
 
-def unproject_depth_image(image, mask, depth, camera):
-    """
-    Unprojects a depth image into a 3D point cloud.
-
-    Args:
-        image (torch.Tensor): A square image to unproject (S, S, 3).
-        mask (torch.Tensor): A binary mask for the image (S, S).
-        depth (torch.Tensor): The depth map of the image (S, S).
-        camera: The Pytorch3D camera to render the image.
+def render_vox(voxels_src, voxels_tgt = None, src_path = "submissions/source_vox.gif", tgt_path = "submissions/target_vox.gif", num_views = 24):
     
-    Returns:
-        points (torch.Tensor): The 3D points of the unprojected image (N, 3).
-        rgba (torch.Tensor): The rgba color values corresponding to the unprojected
-            points (N, 4).
-    """
-    device = camera.device
-    assert image.shape[0] == image.shape[1], "Image must be square."
-    image_shape = image.shape[0]
-    ndc_pixel_coordinates = torch.linspace(1, -1, image_shape)
-    Y, X = torch.meshgrid(ndc_pixel_coordinates, ndc_pixel_coordinates)
-    xy_depth = torch.dstack([X, Y, depth])
-    points = camera.unproject_points(
-        xy_depth.to(device), in_ndc=False, from_ndc=False, world_coordinates=True,
-    )
-    points = points[mask > 0.5]
-    rgb = image[mask > 0.5]
-    rgb = rgb.to(device)
+    R, T = look_at_view_transform(dist=3, elev=0, azim=np.linspace(-180, 180, num_views, endpoint=False))
+    many_cameras = FoVPerspectiveCameras(R=R, T=T, device=voxels_src.device)
+    renderer = get_mesh_renderer(device=voxels_src.device)
 
-    # For some reason, the Pytorch3D compositor does not apply a background color
-    # unless the pointcloud is RGBA.
-    alpha = torch.ones_like(rgb)[..., :1]
-    rgb = torch.cat([rgb, alpha], dim=1)
+    src_verts = voxels_src.verts_list()[0]
+    src_faces = voxels_src.faces_list()[0]
+    textures = TexturesVertex(src_verts.unsqueeze(0))
+    src_mesh = Meshes(verts=[src_verts], faces=[src_faces], textures = textures)
+    
+    my_images = renderer(src_mesh.extend(num_views), cameras=many_cameras)
+    my_images = my_images.cpu().detach().numpy()
+    imageio.mimsave(src_path, my_images, fps=12)
 
-    return points, rgb
+    if voxels_tgt is not None:
+        tgt_verts = voxels_tgt.verts_list()[0]
+        tgt_faces = voxels_tgt.faces_list()[0]
+        textures = TexturesVertex(tgt_verts.unsqueeze(0))
+        tgt_mesh = Meshes(verts=[tgt_verts], faces=[tgt_faces], textures = textures)
+        
+        my_images = renderer(tgt_mesh.extend(num_views), cameras=many_cameras)
+        my_images = my_images.cpu().detach().numpy()
+        imageio.mimsave(tgt_path, my_images, fps=12)
+    
+    return
 
+def render_mesh(src_mesh, tgt_mesh = None, src_path = "submissions/source_mesh.gif", tgt_path = "submissions/target_mesh.gif", num_views = 24):
 
-def load_cow_mesh(path="data/cow_mesh.obj"):
-    """
-    Loads vertices and faces from an obj file.
+    R, T = look_at_view_transform(dist=3, elev=0, azim=np.linspace(-180, 180, num_views, endpoint=False))
+    many_cameras = FoVPerspectiveCameras(R=R, T=T, device=src_mesh.device)
+    renderer = get_mesh_renderer(device=src_mesh.device)
+    
+    src_verts = src_mesh.verts_list()[0]
+    src_faces = src_mesh.faces_list()[0]
+    textures = TexturesVertex(src_verts.unsqueeze(0))
+    src_mesh = Meshes(verts=[src_verts], faces=[src_faces], textures = textures)
+    
+    my_images = renderer(src_mesh.extend(num_views), cameras=many_cameras)
+    my_images = my_images.cpu().detach().numpy()
+    imageio.mimsave(src_path, my_images, fps=12)
 
-    Returns:
-        vertices (torch.Tensor): The vertices of the mesh (N_v, 3).
-        faces (torch.Tensor): The faces of the mesh (N_f, 3).
-    """
-    vertices, faces, _ = load_obj(path)
-    faces = faces.verts_idx
-    return vertices, faces
+    if tgt_mesh is not None:
+        tgt_verts = tgt_mesh.verts_list()[0]
+        tgt_faces = tgt_mesh.faces_list()[0]
+        textures = TexturesVertex(tgt_verts.unsqueeze(0))
+        tgt_mesh = Meshes(verts=[tgt_verts], faces=[tgt_faces], textures = textures)
+        
+        my_images = renderer(tgt_mesh.extend(num_views), cameras=many_cameras)
+        my_images = my_images.cpu().detach().numpy()
+        imageio.mimsave(tgt_path, my_images, fps=12)
+
+    return
+
+def render_cloud(src_cloud, tgt_cloud = None, src_path = "submissions/source_cloud.gif", tgt_path = "submissions/target_cloud.gif", num_views = 24, dist = 3, radius = 0.03):
+
+    R, T = look_at_view_transform(dist=dist, elev=0, azim=np.linspace(-180, 180, num_views, endpoint=False))
+    many_cameras = FoVPerspectiveCameras(R=R, T=T, device=src_cloud.device)
+    renderer = get_points_renderer(device=src_cloud.device, radius=radius)
+
+    rgb = torch.ones_like(src_cloud) 
+    src_cloud = Pointclouds(points=src_cloud, features=rgb).to(src_cloud.device)
+    print(src_cloud.extend(num_views))
+
+    my_images = renderer(src_cloud.extend(num_views), cameras=many_cameras)
+    my_images = my_images.cpu().detach().numpy()
+    imageio.mimsave(src_path, my_images, fps=12)
+    
+    if tgt_cloud is not None: 
+        tgt_cloud = Pointclouds(points=tgt_cloud, features=rgb).to(src_cloud.device)
+        my_images = renderer(tgt_cloud.extend(num_views), cameras=many_cameras)
+        my_images = my_images.cpu().detach().numpy()
+        imageio.mimsave(tgt_path, my_images, fps=12)
+    
+    return

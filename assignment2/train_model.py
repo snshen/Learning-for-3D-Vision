@@ -73,6 +73,7 @@ def train_model(args):
         num_workers=args.num_workers,
         collate_fn=collate_batched_R2N2,
         pin_memory=True,
+        shuffle = True,
         drop_last=True)
     train_loader = iter(loader)
 

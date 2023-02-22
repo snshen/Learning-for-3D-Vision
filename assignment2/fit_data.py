@@ -131,45 +131,11 @@ def train_model(args):
 
         # fitting
         fit_voxel(voxels_src, voxels_tgt, args)
-        num_views = 24
+
         voxels_src = cubify(voxels_src, 1)
         voxels_tgt = cubify(voxels_tgt, 1)
         
-        tgt_verts = voxels_tgt.verts_list()[0]
-        tgt_faces = voxels_tgt.faces_list()[0]
-        textures = pytorch3d.renderer.TexturesVertex(tgt_verts.unsqueeze(0))
-        tgt_mesh = pytorch3d.structures.Meshes(
-            verts=[tgt_verts],   
-            faces=[tgt_faces],
-            textures = textures
-        )
-
-        src_verts = voxels_src.verts_list()[0]
-        src_faces = voxels_src.faces_list()[0]
-        textures = pytorch3d.renderer.TexturesVertex(src_verts.unsqueeze(0))
-        src_mesh = pytorch3d.structures.Meshes(
-            verts=[src_verts],   
-            faces=[src_faces],
-            textures = textures
-        )
-
-        R, T = pytorch3d.renderer.look_at_view_transform(
-            dist=3,
-            elev=0,
-            azim=np.linspace(-180, 180, num_views, endpoint=False),
-        )
-        many_cameras = pytorch3d.renderer.FoVPerspectiveCameras(
-            R=R,
-            T=T,
-            device=args.device
-        )
-        renderer = get_mesh_renderer(device=args.device)
-        my_images = renderer(tgt_mesh.extend(num_views), cameras=many_cameras)
-        my_images = my_images.cpu().numpy()
-        imageio.mimsave("submissions/target_vox.gif", my_images, fps=12)
-        my_images = renderer(src_mesh.extend(num_views), cameras=many_cameras)
-        my_images = my_images.cpu().numpy()
-        imageio.mimsave("submissions/source_vox.gif", my_images, fps=12)
+        render_vox(voxels_src, voxels_tgt = voxels_tgt)
     
     elif args.type == "point":
         # initialization
@@ -179,6 +145,7 @@ def train_model(args):
 
         # fitting
         fit_pointcloud(pointclouds_src, pointclouds_tgt, args)        
+        render_cloud(pointclouds_src, tgt_cloud = pointclouds_tgt, radius = 0.02)
     
     elif args.type == "mesh":
         # initialization
@@ -188,6 +155,7 @@ def train_model(args):
 
         # fitting
         fit_mesh(mesh_src, mesh_tgt, args)  
+        render_mesh(mesh_src, tgt_mesh = mesh_tgt)
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Model Fit', parents=[get_args_parser()])
