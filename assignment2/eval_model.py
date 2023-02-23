@@ -3,14 +3,16 @@ import time
 import torch
 from model import SingleViewto3D
 from r2n2_custom import R2N2
-from  pytorch3d.datasets.r2n2.utils import collate_batched_R2N2
 import dataset_location
-import pytorch3d
+from  pytorch3d.datasets.r2n2.utils import collate_batched_R2N2
 from pytorch3d.ops import sample_points_from_meshes
 from pytorch3d.ops import knn_points
+from pytorch3d.structures import Meshes
 import mcubes
 import utils_vox
 import matplotlib.pyplot as plt 
+
+from tqdm import trange
 
 from utils import *
 
@@ -89,11 +91,15 @@ def evaluate(predictions, mesh_gt, thresholds, args):
     if args.type == "vox":
         voxels_src = predictions
         H,W,D = voxels_src.shape[2:]
-        
+
         vertices_src, faces_src = mcubes.marching_cubes(voxels_src.detach().cpu().squeeze().numpy(), isovalue=0.5)
         vertices_src = torch.tensor(vertices_src).float()
         faces_src = torch.tensor(faces_src.astype(int))
-        mesh_src = pytorch3d.structures.Meshes([vertices_src], [faces_src])
+        mesh_src = Meshes([vertices_src], [faces_src])
+        
+        if len(mesh_src.verts_list()[0]) == 0:
+            return None
+        
         pred_points = sample_points_from_meshes(mesh_src, args.n_points)
         pred_points = utils_vox.Mem2Ref(pred_points, H, W, D)
     elif args.type == "point":
@@ -141,29 +147,47 @@ def evaluate_model(args):
     print("Starting evaluating !")
     max_iter = len(eval_loader)
     for step in range(start_iter, max_iter):
+
         iter_start_time = time.time()
-
         read_start_time = time.time()
-
         feed_dict = next(eval_loader)
-
         images_gt, mesh_gt = preprocess(feed_dict, args)
-
         read_time = time.time() - read_start_time
 
         predictions = model(images_gt, args)
-
         if args.type == "vox":
             predictions = predictions.permute(0,1,4,3,2)
 
         metrics = evaluate(predictions, mesh_gt, thresholds, args)
 
-        # TODO:
-        if (step % args.vis_freq) == 0:
-            # visualization block
-            render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "submissions/model_vox.gif", tgt_path = "submissions/model_vox_t.gif" )
-            # plt.imsave(f'vis/{step}_{args.type}.png', rend)
-      
+        if metrics is None:
+            print("WARNING: empty mesh found for evaluation ", step)
+            continue
+        
+        if args.type == "point":
+            pointclouds_tgt = sample_points_from_meshes(mesh_gt, args.n_points)
+
+        if step == 1:
+            if args.type == "vox":
+                render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "submissions/model_vox0.gif", tgt_path = "submissions/model_vox_t0.gif" )
+            elif args.type == "point":
+                render_cloud(predictions.squeeze(1), tgt_cloud=pointclouds_tgt, src_path = "submissions/model_cloud0.gif", tgt_path = "submissions/model_cloud_t0.gif" )
+            elif args.type == "mesh":
+                render_mesh(predictions.squeeze(1), tgt_mesh=mesh_gt, src_path = "submissions/model_mesh0.gif", tgt_path = "submissions/model_mesh_t0.gif" )
+        if step == 2:
+            if args.type == "vox":
+                render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "submissions/model_vox1.gif", tgt_path = "submissions/model_vox_t1.gif" )
+            elif args.type == "point":
+                render_cloud(predictions.squeeze(1), tgt_cloud=pointclouds_tgt, src_path = "submissions/model_cloud1.gif", tgt_path = "submissions/model_cloud_t1.gif" )
+            elif args.type == "mesh":
+                render_mesh(predictions.squeeze(1), tgt_mesh=mesh_gt, src_path = "submissions/model_mesh1.gif", tgt_path = "submissions/model_mesh_t1.gif" )
+        if step == 3:
+            if args.type == "vox":
+                render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "submissions/model_vox2.gif", tgt_path = "submissions/model_vox_t2.gif" )
+            elif args.type == "point":
+                render_cloud(predictions.squeeze(1), tgt_cloud=pointclouds_tgt, src_path = "submissions/model_cloud2.gif", tgt_path = "submissions/model_cloud_t2.gif" )
+            elif args.type == "mesh":
+                render_mesh(predictions.squeeze(1), tgt_mesh=mesh_gt, src_path = "submissions/model_mesh2.gif", tgt_path = "submissions/model_mesh_t2.gif" )
 
         total_time = time.time() - start_time
         iter_time = time.time() - iter_start_time
@@ -178,16 +202,13 @@ def evaluate_model(args):
     
 
     avg_f1_score = torch.stack(avg_f1_score).mean(0)
-
     save_plot(thresholds, avg_f1_score,  args)
     print('Done!')
 
 
 def evaluate_in_train(args, model, eval_loader):
-    
+
     model.eval()
-    start_iter = 0
-    start_time = time.time()
 
     thresholds = [0.01, 0.02, 0.03, 0.04, 0.05]
 
@@ -196,44 +217,58 @@ def evaluate_in_train(args, model, eval_loader):
     avg_p_score = []
     avg_r_score = []
     
-    print("Starting evaluating !")
+    # print("Starting evaluating !")
     max_iter = len(eval_loader)
-    for step in range(start_iter, max_iter):
-        iter_start_time = time.time()
-        read_start_time = time.time()
+    with trange(max_iter) as tbatches: 
+        for step in tbatches:
+            tbatches.set_description(f"Evaluate: ")
+            feed_dict = next(eval_loader)
+            images_gt, mesh_gt = preprocess(feed_dict, args)
 
-        feed_dict = next(eval_loader)
-        images_gt, mesh_gt = preprocess(feed_dict, args)
+            predictions = model(images_gt, args)
+            if args.type == "vox":
+                predictions = predictions.permute(0,1,4,3,2)
 
-        read_time = time.time() - read_start_time
+            metrics = evaluate(predictions, mesh_gt, thresholds, args)
+            if metrics is None:
+                tbatches.set_postfix(f1=666, avg_f1=666)
+                print("WARNING: empty mesh found for evaluation ", step)
+                break
 
-        predictions = model(images_gt, args)
+            if step == 1:
+                if args.type == "vox":
+                    render_vox(predictions.squeeze(1), src_path = "submissions/model_vox0.gif")
+                elif args.type == "point":
+                    render_cloud(predictions.squeeze(1), src_path = "submissions/model_cloud0.gif")
+                elif args.type == "mesh":
+                    render_mesh(predictions.squeeze(1), src_path = "submissions/model_mesh0.gif")
+            if step == 2:
+                if args.type == "vox":
+                    render_vox(predictions.squeeze(1), src_path = "submissions/model_vox1.gif")
+                elif args.type == "point":
+                    render_cloud(predictions.squeeze(1), src_path = "submissions/model_cloud1.gif")
+                elif args.type == "mesh":
+                    render_mesh(predictions.squeeze(1), src_path = "submissions/model_mesh1.gif")
+            if step == 3:
+                if args.type == "vox":
+                    render_vox(predictions.squeeze(1), src_path = "submissions/model_vox2.gif")
+                elif args.type == "point":
+                    render_cloud(predictions.squeeze(1), src_path = "submissions/model_cloud2.gif")
+                elif args.type == "mesh":
+                    render_mesh(predictions.squeeze(1), src_path = "submissions/model_mesh2.gif")
 
-        if args.type == "vox":
-            predictions = predictions.permute(0,1,4,3,2)
+            f1_05 = metrics['F1@0.050000']
+            avg_f1_score_05.append(f1_05)
+            avg_p_score.append(torch.tensor([metrics["Precision@%f" % t] for t in thresholds]))
+            avg_r_score.append(torch.tensor([metrics["Recall@%f" % t] for t in thresholds]))
+            avg_f1_score.append(torch.tensor([metrics["F1@%f" % t] for t in thresholds]))
 
-        metrics = evaluate(predictions, mesh_gt, thresholds, args)
-
-        # TODO:
-        if (step % args.vis_freq) == 0:
-            # visualization block
-            render_vox(predictions.squeeze(1), src_path = "submissions/model_vox.gif", tgt_path = "submissions/model_vox_t.gif" )
-            # plt.imsave(f'vis/{step}_{args.type}.png', rend)
-
-        total_time = time.time() - start_time
-        iter_time = time.time() - iter_start_time
-
-        f1_05 = metrics['F1@0.050000']
-        avg_f1_score_05.append(f1_05)
-        avg_p_score.append(torch.tensor([metrics["Precision@%f" % t] for t in thresholds]))
-        avg_r_score.append(torch.tensor([metrics["Recall@%f" % t] for t in thresholds]))
-        avg_f1_score.append(torch.tensor([metrics["F1@%f" % t] for t in thresholds]))
-
-        print("[%4d/%4d]; ttime: %.0f (%.2f, %.2f); F1@0.05: %.3f; Avg F1@0.05: %.3f" % (step, max_iter, total_time, read_time, iter_time, f1_05, torch.tensor(avg_f1_score_05).mean()))
-    
+            tbatches.set_postfix(f1=f1_05, avg_f1=torch.tensor(avg_f1_score_05).mean())
+            # print("[%4d/%4d]; ttime: %.0f (%.2f, %.2f); F1@0.05: %.3f; Avg F1@0.05: %.3f" % (step, max_iter, total_time, read_time, iter_time, f1_05, torch.tensor(avg_f1_score_05).mean()))
+        
     avg_f1_score = torch.stack(avg_f1_score).mean(0)
     save_plot(thresholds, avg_f1_score,  args)
-    print('Done!')
+    return avg_f1_score
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Singleto3D', parents=[get_args_parser()])

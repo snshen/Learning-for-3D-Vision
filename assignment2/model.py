@@ -21,10 +21,6 @@ class SingleViewto3D(nn.Module):
             # Output: b x 1 x 32 x 32 x 32
             self.layer0 = torch.nn.Sequential(
                 torch.nn.Linear(512, 2048)
-                # torch.nn.Linear(2048, 1024),
-                # torch.nn.Linear(1024, 512),
-                # torch.nn.Linear(512, 128),
-                # torch.nn.Linear(128, 128)
             )
             self.layer1 = torch.nn.Sequential(
                 torch.nn.ConvTranspose3d(256, 128, kernel_size=4, stride=2, bias=False, padding=1),
@@ -55,6 +51,28 @@ class SingleViewto3D(nn.Module):
             # Input: b x 512
             # Output: b x args.n_points x 3  
             self.n_point = args.n_points
+
+            self.layer0 = torch.nn.Sequential(
+                torch.nn.Linear(512, self.n_point*3),
+                torch.nn.Linear(self.n_point*3, self.n_point*4),
+                torch.nn.Linear(self.n_point*4, self.n_point*4),
+                torch.nn.Linear(self.n_point*4, self.n_point*3),
+                torch.nn.Tanh()
+            )
+            self.layer1 = torch.nn.Sequential(
+                torch.nn.ConvTranspose3d(1, 8, kernel_size=4, stride=1, bias=False, padding=1),
+                torch.nn.BatchNorm3d(8),
+                torch.nn.ReLU()
+            )
+            self.layer2 = torch.nn.Sequential(
+                torch.nn.ConvTranspose3d(8, 4, kernel_size=4, stride=2, bias=False, padding=1),
+                torch.nn.BatchNorm3d(4),
+                torch.nn.ReLU()
+            )
+            self.layer3 = torch.nn.Sequential(
+                torch.nn.ConvTranspose3d(4, 1, kernel_size=1, bias=False),
+                torch.nn.Tanh()
+            )
             # TODO:
             # self.decoder =             
         elif args.type == "mesh":
@@ -82,27 +100,21 @@ class SingleViewto3D(nn.Module):
 
         # call decoder
         if args.type == "vox":
-            # for features in image_features:
-            # gen_volume = encoded_feat.view(-1, 64, 2, 2, 2)
             gen_volume = self.layer0(encoded_feat)
             gen_volume = gen_volume.view(-1, 256, 2, 2, 2)
-            # print(gen_volume.size())   # torch.Size([batch_size, 2048, 2, 2, 2])
             gen_volume = self.layer1(gen_volume)
-            # print(gen_volume.size())   # torch.Size([batch_size, 512, 4, 4, 4])
             gen_volume = self.layer2(gen_volume)
-            # print(gen_volume.size())   # torch.Size([batch_size, 128, 8, 8, 8])
             gen_volume = self.layer3(gen_volume)
-            # print(gen_volume.size())   # torch.Size([batch_size, 32, 16, 16, 16])
             gen_volume = self.layer4(gen_volume)
-            # print(gen_volume.size())   # torch.Size([batch_size, 8, 32, 32, 32])
             voxels_pred = self.layer5(gen_volume)
-            # print(gen_volume.size())   # torch.Size([batch_size, 1, 32, 32, 32])
-                 
             return voxels_pred
 
         elif args.type == "point":
-            # TODO:
-            # pointclouds_pred =             
+            gen_volume = self.layer0(encoded_feat)
+            pointclouds_pred = gen_volume.view(-1, args.n_points, 3)
+            # gen_volume = self.layer1(gen_volume)
+            # gen_volume = self.layer2(gen_volume)
+            # pointclouds_pred = self.layer3(gen_volume)
             return pointclouds_pred
 
         elif args.type == "mesh":

@@ -158,7 +158,7 @@ def render_cloud(src_cloud, tgt_cloud = None, src_path = "submissions/source_clo
     many_cameras = FoVPerspectiveCameras(R=R, T=T, device=src_cloud.device)
     renderer = get_points_renderer(device=src_cloud.device, radius=radius)
 
-    rgb = torch.ones_like(src_cloud) 
+    rgb = torch.ones_like(src_cloud).to(src_cloud.device)
     src_cloud = Pointclouds(points=src_cloud, features=rgb).to(src_cloud.device)
     print(src_cloud.extend(num_views))
 
@@ -167,7 +167,7 @@ def render_cloud(src_cloud, tgt_cloud = None, src_path = "submissions/source_clo
     imageio.mimsave(src_path, my_images, fps=12)
     
     if tgt_cloud is not None: 
-        tgt_cloud = Pointclouds(points=tgt_cloud, features=rgb).to(src_cloud.device)
+        tgt_cloud = Pointclouds(points=tgt_cloud.to(src_cloud.device), features=rgb).to(src_cloud.device)
         my_images = renderer(tgt_cloud.extend(num_views), cameras=many_cameras)
         my_images = my_images.cpu().detach().numpy()
         imageio.mimsave(tgt_path, my_images, fps=12)

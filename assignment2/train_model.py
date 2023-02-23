@@ -7,7 +7,9 @@ from  pytorch3d.datasets.r2n2.utils import collate_batched_R2N2
 import dataset_location
 from pytorch3d.ops import sample_points_from_meshes
 import losses
-from eval_model import evaluate_in_train
+from eval_model import evaluate_in_train, evaluate_model
+from tqdm import tqdm, trange
+import numpy as np
 
 
 def get_args_parser():
@@ -15,6 +17,7 @@ def get_args_parser():
     # Model parameters
     parser.add_argument('--arch', default='resnet18', type=str)
     parser.add_argument('--lr', default=1e-3, type=str)
+    parser.add_argument('--max_epoch', default=350, type=str)
     parser.add_argument('--max_iter', default=10000, type=str)
     parser.add_argument('--log_freq', default=100, type=str)
     parser.add_argument('--vis_freq', default=100, type=int)
@@ -96,7 +99,7 @@ def train_model(args):
         print(f"Succesfully loaded iter {start_iter}")
     
     print("Starting training !")
-    for step in range(start_iter, args.max_iter):
+    for step in range(start_iter, args.max_epoch):
         iter_start_time = time.time()
 
         if step % len(train_loader) == 0: #restart after one epoch
@@ -129,7 +132,7 @@ def train_model(args):
                 'optimizer_state_dict': optimizer.state_dict()
                 }, f'checkpoint_{args.type}.pth')
 
-        print("[%4d/%4d]; ttime: %.0f (%.2f, %.2f); loss: %.3f" % (step, args.max_iter, total_time, read_time, iter_time, loss_vis))
+        print("[%4d/%4d]; ttime: %.0f (%.2f, %.2f); loss: %.3f" % (step, args.max_epoch, total_time, read_time, iter_time, loss_vis))
 
     print('Done!')
 
@@ -137,7 +140,6 @@ def train_model(args):
 
 def train_with_eval(args):
     r2n2_dataset_t = R2N2("train", dataset_location.SHAPENET_PATH, dataset_location.R2N2_PATH, dataset_location.SPLITS_PATH, return_voxels=True, return_feats=args.load_feat)
-
     t_loader = torch.utils.data.DataLoader(
         r2n2_dataset_t,
         batch_size=args.batch_size,
@@ -149,15 +151,13 @@ def train_with_eval(args):
     train_loader = iter(t_loader)
 
     r2n2_dataset_e = R2N2("test", dataset_location.SHAPENET_PATH, dataset_location.R2N2_PATH, dataset_location.SPLITS_PATH, return_voxels=True, return_feats=args.load_feat)
-
     e_loader = torch.utils.data.DataLoader(
         r2n2_dataset_e,
-        batch_size=args.batch_size,
+        batch_size=1,
         num_workers=args.num_workers,
         collate_fn=collate_batched_R2N2,
         pin_memory=True,
         drop_last=True)
-
 
     model =  SingleViewto3D(args)
     model.to(args.device)
@@ -165,9 +165,7 @@ def train_with_eval(args):
 
     # ============ preparing optimizer ... ============
     optimizer = torch.optim.Adam(model.parameters(), lr = args.lr)  # to use with ViTs
-    decoder_lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
-                                                                milestones=[],
-                                                                gamma=cfg.TRAIN.GAMMA)
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[50, 100], gamma=0.5)
     start_iter = 0
     start_time = time.time()
 
@@ -179,46 +177,51 @@ def train_with_eval(args):
         print(f"Succesfully loaded iter {start_iter}")
     
     print("Starting training !")
-    for step in range(start_iter, args.max_iter):
-        iter_start_time = time.time()
+    max_iter = len(train_loader)
+    best_f1 = np.inf
+    for epoch in range(args.max_epoch):
+        epoch_loses = []
+        with trange(max_iter) as tbatches:
+            for step in tbatches:
 
-        if step % len(train_loader) == 0: #restart after one epoch
-            train_loader = iter(t_loader)
+                tbatches.set_description(f"Epoch {epoch}")
+                train_loader = iter(train_loader)
+                feed_dict = next(train_loader)
+                images_gt, ground_truth_3d = preprocess(feed_dict,args)
 
-        read_start_time = time.time()
+                prediction_3d = model(images_gt, args)
+                loss = calculate_loss(prediction_3d, ground_truth_3d, args)
 
-        feed_dict = next(train_loader)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-        images_gt, ground_truth_3d = preprocess(feed_dict,args)
-        read_time = time.time() - read_start_time
+                tbatches.set_postfix(loss=loss.item())
+                epoch_loses.append(loss.cpu().item())
 
-        prediction_3d = model(images_gt, args)
-        
-        loss = calculate_loss(prediction_3d, ground_truth_3d, args)
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()        
-
-        total_time = time.time() - start_time
-        iter_time = time.time() - iter_start_time
-
-        loss_vis = loss.cpu().item()
-
-        if (step % args.save_freq) == 0:
+                if step == max_iter-1:
+                    torch.save({
+                        'step': step,
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()
+                        }, f'checkpoint_{args.type}.pth')
+                    
+        train_loader = iter(t_loader)        
+        eval_loader = iter(e_loader)
+        avg_f1_score = evaluate_in_train(args, model, eval_loader)
+        avg_f1_mean = avg_f1_score.mean()
+        model.train()
+        if torch.sum(avg_f1_mean) < best_f1:
             torch.save({
-                'step': step,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict()
-                }, f'checkpoint_{args.type}.pth')
-        
-        if (step % args.vis_freq) == 0:
-            eval_loader = iter(e_loader)
-
-            model.train()
+                        'epoch': epoch,
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()
+                        }, f'best_checkpoint_{args.type}.pth')
+            print("Saved new best model!")
             
-
-        print("[%4d/%4d]; ttime: %.0f (%.2f, %.2f); loss: %.3f" % (step, args.max_iter, total_time, read_time, iter_time, loss_vis))
+        total_time = time.time() - start_time        
+        print("Epoch [%4d/%4d] | ttime: %.0f | loss: %.3f | AvgF1: %.3f" % (epoch, args.max_epoch, total_time, np.mean(epoch_loses), avg_f1_mean))
+        lr_scheduler.step()
 
     print('Done!')
 
@@ -227,5 +230,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.with_eval:
         train_with_eval(args)
-    train_model(args)
+    else: 
+        train_model(args)
     
