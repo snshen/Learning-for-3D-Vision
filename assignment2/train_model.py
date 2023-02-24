@@ -20,7 +20,7 @@ def get_args_parser():
     parser.add_argument('--max_epoch', default=350, type=str)
     parser.add_argument('--max_iter', default=10000, type=str)
     parser.add_argument('--log_freq', default=100, type=str)
-    parser.add_argument('--vis_freq', default=100, type=int)
+    parser.add_argument('--vis', action='store_true')
     parser.add_argument('--batch_size', default=64, type=str)
     parser.add_argument('--num_workers', default=0, type=str)
     parser.add_argument('--type', default='vox', choices=['vox', 'point', 'mesh'], type=str)
@@ -149,6 +149,8 @@ def train_with_eval(args):
         shuffle = True,
         drop_last=True)
     train_loader = iter(t_loader)
+    del r2n2_dataset_t
+    torch.cuda.empty_cache()
 
     r2n2_dataset_e = R2N2("test", dataset_location.SHAPENET_PATH, dataset_location.R2N2_PATH, dataset_location.SPLITS_PATH, return_voxels=True, return_feats=args.load_feat)
     e_loader = torch.utils.data.DataLoader(
@@ -158,14 +160,24 @@ def train_with_eval(args):
         collate_fn=collate_batched_R2N2,
         pin_memory=True,
         drop_last=True)
+    del r2n2_dataset_e
+    torch.cuda.empty_cache()
 
     model =  SingleViewto3D(args)
     model.to(args.device)
     model.train()
 
     # ============ preparing optimizer ... ============
-    optimizer = torch.optim.Adam(model.parameters(), lr = args.lr)  # to use with ViTs
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[50, 100], gamma=0.5)
+    if args.type == "vox":
+        optimizer = torch.optim.Adam(model.parameters(), lr = args.lr)  # to use with ViTs
+        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[50, 100], gamma=0.5)
+    elif args.type == "point":
+        optimizer = torch.optim.Adam(model.parameters(), lr = args.lr)  # to use with ViTs
+        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[50, 100], gamma=0.5)
+    elif args.type == "mesh":
+        optimizer = torch.optim.Adam(model.parameters(), lr = args.lr)  # to use with ViTs
+        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[50, 100], gamma=0.5)
+
     start_iter = 0
     start_time = time.time()
 
@@ -218,6 +230,7 @@ def train_with_eval(args):
                         'optimizer_state_dict': optimizer.state_dict()
                         }, f'best_checkpoint_{args.type}.pth')
             print("Saved new best model!")
+            best_f1 = avg_f1_mean
             
         total_time = time.time() - start_time        
         print("Epoch [%4d/%4d] | ttime: %.0f | loss: %.3f | AvgF1: %.3f" % (epoch, args.max_epoch, total_time, np.mean(epoch_loses), avg_f1_mean))

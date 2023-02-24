@@ -1,4 +1,4 @@
 assignment2/r2n2_shapenet_dataset/*
 */__pycache__/*
 *.pth
-*backup*
+*/backup/*
