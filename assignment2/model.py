@@ -14,6 +14,13 @@ class SingleViewto3D(nn.Module):
             vision_model = torchvision_models.__dict__[args.arch](pretrained=True)
             self.encoder = torch.nn.Sequential(*(list(vision_model.children())[:-1]))
             self.normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
+        # if args.type =="mesh":
+        #     args.type = "vox"
+        #     self.voxelize_args = args
+        #     self.voxelize = SingleViewto3D(args)
+        #     checkpoint = torch.load(f'checkpoint_vox_b.pth')
+        #     self.voxelize.load_state_dict(checkpoint['model_state_dict'])
+        #     args.type = "mesh"
 
         # define decoder
         if args.type == "vox":
@@ -51,32 +58,22 @@ class SingleViewto3D(nn.Module):
             # Input: b x 512
             # Output: b x args.n_points x 3  
             self.n_point = args.n_points
-
+            
             self.layer0 = torch.nn.Sequential(
-                torch.nn.Linear(512, self.n_point*3),
+                torch.nn.Linear(512, self.n_point),
                 torch.nn.LeakyReLU(),
-                torch.nn.Linear(self.n_point*3, self.n_point*3),
+                torch.nn.Linear(self.n_point, self.n_point*2),
                 torch.nn.LeakyReLU(),
-                torch.nn.Linear(self.n_point*3, self.n_point*3),
-                torch.nn.LeakyReLU(),
-                torch.nn.Linear(self.n_point*3, self.n_point*3),
+                torch.nn.Linear(self.n_point*2, self.n_point*3),
                 torch.nn.Tanh()
-            )
-            self.layer1 = torch.nn.Sequential(
-                torch.nn.ConvTranspose3d(1, 8, kernel_size=4, stride=1, bias=False, padding=1),
-                torch.nn.BatchNorm3d(8),
-                torch.nn.ReLU()
-            )
-            self.layer2 = torch.nn.Sequential(
-                torch.nn.ConvTranspose3d(8, 4, kernel_size=4, stride=2, bias=False, padding=1),
-                torch.nn.BatchNorm3d(4),
-                torch.nn.ReLU()
-            )
-            self.layer3 = torch.nn.Sequential(
-                torch.nn.ConvTranspose3d(4, 1, kernel_size=1, bias=False),
-                torch.nn.Tanh()
-            )
-            # self.decoder =             
+            )           
+
+            # self.layer0 = torch.nn.Sequential(
+            #     torch.nn.Linear(512, self.n_point),
+            #     torch.nn.LeakyReLU(),
+            #     torch.nn.Linear(self.n_point, self.n_point*3),
+            #     torch.nn.Tanh()
+            # )          
         elif args.type == "mesh":
             # Input: b x 512
             # Output: b x mesh_pred.verts_packed().shape[0] x 3  
@@ -85,7 +82,16 @@ class SingleViewto3D(nn.Module):
             self.mesh_pred = pytorch3d.structures.Meshes(mesh_pred.verts_list()*args.batch_size, mesh_pred.faces_list()*args.batch_size)
 
             self.layer0 = torch.nn.Sequential(
-                torch.nn.Linear(512, 2048)
+                torch.nn.Linear(512, 4096),
+                torch.nn.ELU(),
+                # torch.nn.Linear(2048, 8192),
+                # torch.nn.ELU(),
+                # torch.nn.Linear(8192, 8192),
+                # torch.nn.ELU(),
+                # torch.nn.Linear(8192, 8192),
+                # torch.nn.ELU(),
+                torch.nn.Linear(4096, 3*mesh_pred.verts_packed().shape[0]),
+                torch.nn.Tanh()
             )
             self.layer1 = torch.nn.Sequential(
                 torch.nn.ConvTranspose3d(256, 128, kernel_size=4, stride=2, bias=False, padding=1),
@@ -111,6 +117,11 @@ class SingleViewto3D(nn.Module):
                 torch.nn.ConvTranspose3d(8, 1, kernel_size=1, bias=False),
                 torch.nn.Sigmoid()
             )
+            self.layer6 = torch.nn.Sequential(
+                torch.nn.Linear(32768, 3*mesh_pred.verts_packed().shape[0]),
+                torch.nn.Tanh()
+            )
+
             # self.decoder =             
 
     def forward(self, images, args):
@@ -147,14 +158,23 @@ class SingleViewto3D(nn.Module):
             return pointclouds_pred
 
         elif args.type == "mesh":
-            gen_volume = self.layer0(encoded_feat)
-            gen_volume = gen_volume.view(-1, 256, 2, 2, 2)
-            gen_volume = self.layer1(gen_volume)
-            gen_volume = self.layer2(gen_volume)
-            gen_volume = self.layer3(gen_volume)
-            gen_volume = self.layer4(gen_volume)
-            deform_vertices_pred = self.layer5(gen_volume)      
+            # args.type = "vox"
+            # gen_volume = self.voxelize(images, args)
+            # args.type = "mesh"
+            # gen_volume = gen_volume.view(-1, 32768)
+            # deform_vertices_pred = self.layer6(gen_volume)
 
+            deform_vertices_pred = self.layer0(encoded_feat)
+            # gen_volume = self.layer1(gen_volume)
+            # print(gen_volume.shape)
+            # gen_volume = self.layer2(gen_volume)
+            # print(gen_volume.shape)
+            # gen_volume = self.layer3(gen_volume)
+            # print(gen_volume.shape)
+            # gen_volume = self.layer4(gen_volume)
+            # print(gen_volume.shape)
+            # deform_vertices_pred = self.layer5(gen_volume)  
+            
             mesh_pred = self.mesh_pred.offset_verts(deform_vertices_pred.reshape([-1,3]))
             return  mesh_pred          
 

@@ -16,13 +16,13 @@ def get_args_parser():
     parser = argparse.ArgumentParser('Singleto3D', add_help=False)
     # Model parameters
     parser.add_argument('--arch', default='resnet18', type=str)
-    parser.add_argument('--lr', default=1e-3, type=str)
-    parser.add_argument('--max_epoch', default=350, type=str)
-    parser.add_argument('--max_iter', default=10000, type=str)
-    parser.add_argument('--log_freq', default=100, type=str)
+    parser.add_argument('--lr', default=1e-3, type=float)
+    parser.add_argument('--max_epoch', default=150, type=int)
+    parser.add_argument('--max_iter', default=10000, type=int)
+    parser.add_argument('--log_freq', default=100, type=int)
     parser.add_argument('--vis', action='store_true')
-    parser.add_argument('--batch_size', default=64, type=str)
-    parser.add_argument('--num_workers', default=0, type=str)
+    parser.add_argument('--batch_size', default=64, type=int)
+    parser.add_argument('--num_workers', default=0, type=int)
     parser.add_argument('--type', default='vox', choices=['vox', 'point', 'mesh'], type=str)
     parser.add_argument('--n_points', default=5000, type=int)
     parser.add_argument('--w_chamfer', default=1.0, type=float)
@@ -173,10 +173,10 @@ def train_with_eval(args):
         lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[50, 100], gamma=0.5)
     elif args.type == "point":
         optimizer = torch.optim.Adam(model.parameters(), lr = args.lr)  # to use with ViTs
-        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[50, 100], gamma=0.5)
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.8, patience=40, cooldown = 40)
     elif args.type == "mesh":
         optimizer = torch.optim.Adam(model.parameters(), lr = args.lr)  # to use with ViTs
-        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[50, 100], gamma=0.5)
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.8, patience=40, cooldown = 40)
 
     start_iter = 0
     start_time = time.time()
@@ -190,7 +190,7 @@ def train_with_eval(args):
     
     print("Starting training !")
     max_iter = len(train_loader)
-    best_f1 = np.inf
+    best_f1 = 0
     for epoch in range(args.max_epoch):
         epoch_loses = []
         with trange(max_iter) as tbatches:
@@ -208,33 +208,39 @@ def train_with_eval(args):
                 loss.backward()
                 optimizer.step()
 
-                tbatches.set_postfix(loss=loss.item())
+                tbatches.set_postfix(loss=loss.item(), lr=optimizer.param_groups[0]['lr'])
                 epoch_loses.append(loss.cpu().item())
 
-                if step == max_iter-1:
-                    torch.save({
-                        'step': step,
-                        'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()
-                        }, f'checkpoint_{args.type}.pth')
+                # if step == max_iter-1:
+                #     torch.save({
+                #         'step': step,
+                #         'model_state_dict': model.state_dict(),
+                #         'optimizer_state_dict': optimizer.state_dict()
+                #         }, f'checkpoint_{args.type}.pth')
+                     
+                if (args.type == "point" or args.type == "mesh") and epoch>0:
+                    lr_scheduler.step(loss)
                     
         train_loader = iter(t_loader)        
         eval_loader = iter(e_loader)
         avg_f1_score = evaluate_in_train(args, model, eval_loader)
         avg_f1_mean = avg_f1_score.mean()
         model.train()
-        if torch.sum(avg_f1_mean) < best_f1:
+        if avg_f1_mean > best_f1:
             torch.save({
                         'epoch': epoch,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()
-                        }, f'best_checkpoint_{args.type}.pth')
+                        }, f'checkpoint_{args.type}_mult.pth')
             print("Saved new best model!")
             best_f1 = avg_f1_mean
+
+        
             
         total_time = time.time() - start_time        
-        print("Epoch [%4d/%4d] | ttime: %.0f | loss: %.3f | AvgF1: %.3f" % (epoch, args.max_epoch, total_time, np.mean(epoch_loses), avg_f1_mean))
-        lr_scheduler.step()
+        print("Epoch [%4d/%4d] | ttime: %.0f | loss: %.3f | AvgF1: %.3f | lr: %.3f" % (epoch, args.max_epoch, total_time, np.mean(epoch_loses), avg_f1_mean, optimizer.param_groups[0]['lr']))
+        if args.type == "vox":
+            lr_scheduler.step()
 
     print('Done!')
 
