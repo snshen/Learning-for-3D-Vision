@@ -167,6 +167,13 @@ def train_with_eval(args):
     model.to(args.device)
     model.train()
 
+    if args.type == "mesh":
+        batch = args.batch_size
+        args.batch_size = 1
+        eval_model =  SingleViewto3D(args)
+        eval_model.to(args.device)
+        args.batch_size = batch
+
     # ============ preparing optimizer ... ============
     if args.type == "vox":
         optimizer = torch.optim.Adam(model.parameters(), lr = args.lr)  # to use with ViTs
@@ -217,13 +224,18 @@ def train_with_eval(args):
                 #         'model_state_dict': model.state_dict(),
                 #         'optimizer_state_dict': optimizer.state_dict()
                 #         }, f'checkpoint_{args.type}.pth')
-                     
                 if (args.type == "point" or args.type == "mesh") and epoch>0:
                     lr_scheduler.step(loss)
-                    
+                
+                torch.cuda.empty_cache()
+
         train_loader = iter(t_loader)        
         eval_loader = iter(e_loader)
-        avg_f1_score = evaluate_in_train(args, model, eval_loader)
+        if args.type == "mesh":
+            eval_model.load_state_dict(model.state_dict())
+            avg_f1_score = evaluate_in_train(args, eval_model, eval_loader)
+        else:
+            avg_f1_score = evaluate_in_train(args, model, eval_loader)
         avg_f1_mean = avg_f1_score.mean()
         model.train()
         if avg_f1_mean > best_f1:
@@ -231,12 +243,10 @@ def train_with_eval(args):
                         'epoch': epoch,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()
-                        }, f'checkpoint_{args.type}_mult.pth')
+                        }, f'checkpoint_{args.type}_small.pth')
             print("Saved new best model!")
             best_f1 = avg_f1_mean
-
-        
-            
+ 
         total_time = time.time() - start_time        
         print("Epoch [%4d/%4d] | ttime: %.0f | loss: %.3f | AvgF1: %.3f | lr: %.3f" % (epoch, args.max_epoch, total_time, np.mean(epoch_loses), avg_f1_mean, optimizer.param_groups[0]['lr']))
         if args.type == "vox":

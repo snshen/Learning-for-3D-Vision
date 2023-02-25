@@ -144,7 +144,7 @@ def render_mesh(src_mesh, tgt_mesh = None, src_path = "submissions/source_mesh.g
         tgt_verts = tgt_mesh.verts_list()[0]
         tgt_faces = tgt_mesh.faces_list()[0]
         textures = TexturesVertex(tgt_verts.unsqueeze(0))
-        tgt_mesh = Meshes(verts=[tgt_verts], faces=[tgt_faces], textures = textures)
+        tgt_mesh = Meshes(verts=[tgt_verts], faces=[tgt_faces], textures = textures).to(src_mesh.device)
         
         my_images = renderer(tgt_mesh.extend(num_views), cameras=many_cameras)
         my_images = my_images.cpu().detach().numpy()

@@ -57,23 +57,14 @@ class SingleViewto3D(nn.Module):
         elif args.type == "point":
             # Input: b x 512
             # Output: b x args.n_points x 3  
-            self.n_point = args.n_points
-            
+            self.n_point = args.n_points       
+
             self.layer0 = torch.nn.Sequential(
                 torch.nn.Linear(512, self.n_point),
                 torch.nn.LeakyReLU(),
-                torch.nn.Linear(self.n_point, self.n_point*2),
-                torch.nn.LeakyReLU(),
-                torch.nn.Linear(self.n_point*2, self.n_point*3),
+                torch.nn.Linear(self.n_point, self.n_point*3),
                 torch.nn.Tanh()
-            )           
-
-            # self.layer0 = torch.nn.Sequential(
-            #     torch.nn.Linear(512, self.n_point),
-            #     torch.nn.LeakyReLU(),
-            #     torch.nn.Linear(self.n_point, self.n_point*3),
-            #     torch.nn.Tanh()
-            # )          
+            )          
         elif args.type == "mesh":
             # Input: b x 512
             # Output: b x mesh_pred.verts_packed().shape[0] x 3  
@@ -84,45 +75,13 @@ class SingleViewto3D(nn.Module):
             self.layer0 = torch.nn.Sequential(
                 torch.nn.Linear(512, 4096),
                 torch.nn.ELU(),
-                # torch.nn.Linear(2048, 8192),
-                # torch.nn.ELU(),
-                # torch.nn.Linear(8192, 8192),
-                # torch.nn.ELU(),
-                # torch.nn.Linear(8192, 8192),
-                # torch.nn.ELU(),
                 torch.nn.Linear(4096, 3*mesh_pred.verts_packed().shape[0]),
                 torch.nn.Tanh()
-            )
-            self.layer1 = torch.nn.Sequential(
-                torch.nn.ConvTranspose3d(256, 128, kernel_size=4, stride=2, bias=False, padding=1),
-                torch.nn.BatchNorm3d(128),
-                torch.nn.ReLU()
-            )
-            self.layer2 = torch.nn.Sequential(
-                torch.nn.ConvTranspose3d(128, 64, kernel_size=4, stride=2, bias=False, padding=1),
-                torch.nn.BatchNorm3d(64),
-                torch.nn.ReLU()
-            )
-            self.layer3 = torch.nn.Sequential(
-                torch.nn.ConvTranspose3d(64, 32, kernel_size=4, stride=2, bias=False, padding=1),
-                torch.nn.BatchNorm3d(32),
-                torch.nn.ReLU()
-            )
-            self.layer4 = torch.nn.Sequential(
-                torch.nn.ConvTranspose3d(32, 8, kernel_size=4, stride=2, bias=False, padding=1),
-                torch.nn.BatchNorm3d(8),
-                torch.nn.ReLU()
-            )
-            self.layer5 = torch.nn.Sequential(
-                torch.nn.ConvTranspose3d(8, 1, kernel_size=1, bias=False),
-                torch.nn.Sigmoid()
-            )
-            self.layer6 = torch.nn.Sequential(
-                torch.nn.Linear(32768, 3*mesh_pred.verts_packed().shape[0]),
+            )    
+            self.layer0 = torch.nn.Sequential(
+                torch.nn.Linear(512, 3*mesh_pred.verts_packed().shape[0]),
                 torch.nn.Tanh()
-            )
-
-            # self.decoder =             
+            )          
 
     def forward(self, images, args):
         results = dict()
