@@ -143,7 +143,7 @@ def evaluate_model(args):
     avg_r_score = []
     
     if args.load_checkpoint:
-        checkpoint = torch.load(f'checkpoint_{args.type}.pth')
+        checkpoint = torch.load(f'checkpoint_{args.type}_smoothest.pth')
         model.load_state_dict(checkpoint['model_state_dict'])
         print(f"Succesfully loaded iter {start_iter}")
     
@@ -172,25 +172,25 @@ def evaluate_model(args):
 
         if step == ids[0]:
             if args.type == "vox":
-                render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "backup/vox/model_vox0.gif", tgt_path = "backup/vox/model_vox_t0.gif" )
+                render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "data/vox/model_vox0.gif", tgt_path = "data/vox/model_vox_t0.gif" )
             elif args.type == "point":
-                render_cloud(predictions.squeeze(1), tgt_cloud=pointclouds_tgt, src_path = "backup/point/model_cloud0.gif", tgt_path = "backup/point/model_cloud_t0.gif", radius = 0.015)
+                render_cloud(predictions.squeeze(1), tgt_cloud=pointclouds_tgt, src_path = "data/point/model_cloud0.gif", tgt_path = "data/point/model_cloud_t0.gif", radius = 0.015)
             elif args.type == "mesh":
-                render_mesh(predictions.squeeze(1), tgt_mesh=mesh_gt, src_path = "backup/mesh/model_mesh0.gif", tgt_path = "backup/mesh/model_mesh_t0.gif" )
+                render_mesh(predictions, tgt_mesh=mesh_gt, src_path = "data/mesh/model_mesh0.gif", tgt_path = "data/mesh/model_mesh_t0.gif" )
         if step == ids[1]:
             if args.type == "vox":
-                render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "backup/vox/model_vox1.gif", tgt_path = "backup/vox/model_vox_t1.gif" )
+                render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "data/vox/model_vox1.gif", tgt_path = "data/vox/model_vox_t1.gif" )
             elif args.type == "point":
-                render_cloud(predictions.squeeze(1), tgt_cloud=pointclouds_tgt, src_path = "backup/point/model_cloud1.gif", tgt_path = "backup/point/model_cloud_t1.gif", radius = 0.015)
+                render_cloud(predictions.squeeze(1), tgt_cloud=pointclouds_tgt, src_path = "data/point/model_cloud1.gif", tgt_path = "data/point/model_cloud_t1.gif", radius = 0.015)
             elif args.type == "mesh":
-                render_mesh(predictions.squeeze(1), tgt_mesh=mesh_gt, src_path = "backup/mesh/model_mesh1.gif", tgt_path = "backup/mesh/model_mesh_t1.gif" )
+                render_mesh(predictions, tgt_mesh=mesh_gt, src_path = "data/mesh/model_mesh1.gif", tgt_path = "data/mesh/model_mesh_t1.gif" )
         if step == ids[2]:
             if args.type == "vox":
-                render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "backup/vox/model_vox2.gif", tgt_path = "backup/vox/model_vox_t2.gif" )
+                render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "data/vox/model_vox2.gif", tgt_path = "data/vox/model_vox_t2.gif" )
             elif args.type == "point":
-                render_cloud(predictions.squeeze(1), tgt_cloud=pointclouds_tgt, src_path = "backup/point/model_cloud2.gif", tgt_path = "backup/point/model_cloud_t2.gif", radius = 0.015)
+                render_cloud(predictions.squeeze(1), tgt_cloud=pointclouds_tgt, src_path = "data/point/model_cloud2.gif", tgt_path = "data/point/model_cloud_t2.gif", radius = 0.015)
             elif args.type == "mesh":
-                render_mesh(predictions.squeeze(1), tgt_mesh=mesh_gt, src_path = "backup/mesh/model_mesh2.gif", tgt_path = "backup/mesh/model_mesh_t2.gif" )
+                render_mesh(predictions, tgt_mesh=mesh_gt, src_path = "data/mesh/model_mesh2.gif", tgt_path = "data/mesh/model_mesh_t2.gif" )
 
         total_time = time.time() - start_time
         iter_time = time.time() - iter_start_time
@@ -230,7 +230,7 @@ def visualize_model(args):
     thresholds = [0.01, 0.02, 0.03, 0.04, 0.05]
     
     if args.load_checkpoint:
-        checkpoint = torch.load(f'checkpoint_{args.type}_small.pth')
+        checkpoint = torch.load(f'checkpoint_{args.type}_smooth.pth')
         model.load_state_dict(checkpoint['model_state_dict'])
         print(f"Succesfully loaded iter {start_iter}")
     
@@ -257,25 +257,25 @@ def visualize_model(args):
 
             if step == ids[0]:
                 if args.type == "vox":
-                    render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "backup/vox/model_vox0.gif", tgt_path = "backup/vox/model_vox_t0.gif" )
+                    render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "data/edge/model_vox0.gif", tgt_path = "data/edge/model_vox_t0.gif" )
                 elif args.type == "point":
-                    render_cloud(predictions.squeeze(1), tgt_cloud=pointclouds_tgt, src_path = "backup/point/model_cloud0.gif", tgt_path = "backup/point/model_cloud_t0.gif", radius = 0.015)
+                    render_cloud(predictions.squeeze(1), tgt_cloud=pointclouds_tgt, src_path = "data/point/model_cloud0.gif", tgt_path = "data/point/model_cloud_t0.gif", radius = 0.015)
                 elif args.type == "mesh":
-                    render_mesh(predictions, tgt_mesh=mesh_gt, src_path = "backup/mesh/model_mesh0.gif", tgt_path = "backup/mesh/model_mesh_t0.gif" )
+                    render_mesh(predictions, tgt_mesh=mesh_gt, src_path = "data/mesh/model_mesh0.gif", tgt_path = "data/mesh/model_mesh_t0.gif" )
             if step == ids[1]:
                 if args.type == "vox":
-                    render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "backup/vox/model_vox1.gif", tgt_path = "backup/vox/model_vox_t1.gif" )
+                    render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "data/edge/model_vox1.gif", tgt_path = "data/edge/model_vox_t1.gif" )
                 elif args.type == "point":
-                    render_cloud(predictions.squeeze(1), tgt_cloud=pointclouds_tgt, src_path = "backup/point/model_cloud1.gif", tgt_path = "backup/point/model_cloud_t1.gif", radius = 0.015)
+                    render_cloud(predictions.squeeze(1), tgt_cloud=pointclouds_tgt, src_path = "data/point/model_cloud1.gif", tgt_path = "data/point/model_cloud_t1.gif", radius = 0.015)
                 elif args.type == "mesh":
-                    render_mesh(predictions, tgt_mesh=mesh_gt, src_path = "backup/mesh/model_mesh1.gif", tgt_path = "backup/mesh/model_mesh_t1.gif" )
+                    render_mesh(predictions, tgt_mesh=mesh_gt, src_path = "data/mesh/model_mesh1.gif", tgt_path = "data/mesh/model_mesh_t1.gif" )
             if step == ids[2]:
                 if args.type == "vox":
-                    render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "backup/vox/model_vox2.gif", tgt_path = "backup/vox/model_vox_t2.gif" )
+                    render_vox(predictions.squeeze(1), mesh_tgt=mesh_gt, src_path = "data/edge/model_vox2.gif", tgt_path = "data/edge/model_vox_t2.gif" )
                 elif args.type == "point":
-                    render_cloud(predictions.squeeze(1), tgt_cloud=pointclouds_tgt, src_path = "backup/point/model_cloud2.gif", tgt_path = "backup/point/model_cloud_t2.gif", radius = 0.015)
+                    render_cloud(predictions.squeeze(1), tgt_cloud=pointclouds_tgt, src_path = "data/point/model_cloud2.gif", tgt_path = "data/point/model_cloud_t2.gif", radius = 0.015)
                 elif args.type == "mesh":
-                    render_mesh(predictions, tgt_mesh=mesh_gt, src_path = "backup/mesh/model_mesh2.gif", tgt_path = "backup/mesh/model_mesh_t2.gif" )
+                    render_mesh(predictions, tgt_mesh=mesh_gt, src_path = "data/mesh/model_mesh2.gif", tgt_path = "data/mesh/model_mesh_t2.gif" )
 
             f1_05 = metrics['F1@0.050000']
             print("[%4d/%4d]; F1@0.05: %.3f" % (step, max_iter, f1_05))

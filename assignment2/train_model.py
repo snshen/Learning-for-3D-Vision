@@ -243,7 +243,7 @@ def train_with_eval(args):
                         'epoch': epoch,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()
-                        }, f'checkpoint_{args.type}_small.pth')
+                        }, f'checkpoint_{args.type}_smoooooth.pth')
             print("Saved new best model!")
             best_f1 = avg_f1_mean
  

@@ -72,12 +72,12 @@ class SingleViewto3D(nn.Module):
             mesh_pred = ico_sphere(4, self.device)
             self.mesh_pred = pytorch3d.structures.Meshes(mesh_pred.verts_list()*args.batch_size, mesh_pred.faces_list()*args.batch_size)
 
-            self.layer0 = torch.nn.Sequential(
-                torch.nn.Linear(512, 4096),
-                torch.nn.ELU(),
-                torch.nn.Linear(4096, 3*mesh_pred.verts_packed().shape[0]),
-                torch.nn.Tanh()
-            )    
+            # self.layer0 = torch.nn.Sequential(
+            #     torch.nn.Linear(512, 4096),
+            #     torch.nn.ELU(),
+            #     torch.nn.Linear(4096, 3*mesh_pred.verts_packed().shape[0]),
+            #     torch.nn.Tanh()
+            # )    
             self.layer0 = torch.nn.Sequential(
                 torch.nn.Linear(512, 3*mesh_pred.verts_packed().shape[0]),
                 torch.nn.Tanh()
