@@ -143,7 +143,7 @@ def evaluate_model(args):
     avg_r_score = []
     
     if args.load_checkpoint:
-        checkpoint = torch.load(f'checkpoint_{args.type}_smoothest.pth')
+        checkpoint = torch.load(f'checkpoint_{args.type}_smoooooth.pth')
         model.load_state_dict(checkpoint['model_state_dict'])
         print(f"Succesfully loaded iter {start_iter}")
     

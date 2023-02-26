@@ -78,27 +78,32 @@ Average test F1 score at 0.05 threshold for voxelgrid, pointcloud and the mesh n
 
 | Type        	| Voxel  	| Point Cloud 	| Mesh  	|
 |-------------	|:--------:	|:-------------:	|:-------:	|
-| Avg F1@0.05 	| 90.890 	| 96.155      	| 91.390 	|
+| Avg F1@0.05 	| 90.890 	| 96.155      	| 93.394 	|
 
 
 Something to note before discussion is that all the models I had implemented were run until loss seemed to stop decreasing, however the runtime and complexity of the Voxel model was significantly higher than the other two as mentioned in the previouse sections. Keeping this in mind, here is an intutive explaination justifying the comparision between models:
 
-1. The point cloud model performed the best. Intuitively and in practice, point clouds are the easiest to optomize. Since points in a cloud are not bound by connectivity, they are affected by neither the inherent connectivity limitations of marching cube (such as with voxels) nor by need to define faces besed on vertex connections (such as with mesh). Because of this factor, misplacement of a single point in a pointcloud does not affect the rest of the model as much as a single voxel or vertex can affectt a voxel or mesh model, therefore allowing the model to converge faster and for the prediction model to be simpler.
+1. The point cloud model performed the best. Intuitively and in practice, point clouds are the easiest to optomize. Since points in a cloud are not bound by connectivity, they are not affected by the need to define faces besed on vertex connections (such as with mesh). Because of this factor, misplacement of a single point in a pointcloud does not affect the rest of the model as much as a vertex can affect a mesh model, therefore allowing the model to converge faster and for the prediction model to be simpler.
 2. While the mesh model technically performed the better than the voxel model, visually it is the least convincing. Intuitively, the reasonable placement of the vertices makes sense for the same reasons as the point cloud model. On the other hand, the inability for the model to predict face orientation well also makes sense due to the now sampling value being used (default of n_points=5000) when calculating loss. Since the number of faces on the ground truth and predicted models are higher than 5000, it makes sense that the model's loss values are not as informative as desired. Another disadvantage that the model faces is the constraint of the spherical topology. This factor makes it impossible for the mesh to accurately represent chairs that require more complex topologies (such as designs that place holes in the backrest of the chair or armrests that form a loop).
-3. The voxel model performed slightly worse than point cloud and mesh. Although it is more complex in concept than point clouds, it benefitted from a well designed architecture that utilizes 3D convolutions which allowed it to gain more spatial reasoning about the discretized space (in this case designated to be 32x32x32). Furthermore, this model in particular benefitted from longer runtime than the other models which seems to have. Interestingly, it looks better than the mesh models but has a worse performance score. This discrepency may be due to the fact that the resolution of the voxel discretization is rather coarse, therefore the model has a hard time representing details, as seen in section 2.6; it can only represent volume by a fixed voxel size regardless of how small the occuying piece is.
+3. The voxel model performed worse than point cloud and mesh. This is somewhat surprising since it benefitted from a well designed architecture that utilizes 3D convolutions which allowed it to gain more spatial reasoning about the discretized space (in this case designated to be 32x32x32). Furthermore, this model in particular benefitted from longer runtime than the other models which seems to have. However, it looks better than the mesh models even though it had a worse performance score. This discrepency may be due to the fact that the resolution of the voxel discretization is rather coarse, therefore the model has a hard time representing details, as seen in section 2.6; it can only represent volume by a fixed voxel size regardless of how small the occuying piece is. Therefore, even though the model is reasonably tuned and looks reasonable, the final model scores comparitively poorly on F1 likely due to shortcomings of the voxel representation.
+
+The generated F1 score curves are included for reference:
+| Voxel | Point Cloud | Mesh |
+|:-:|:-:|:-:|
+|![First Image](./data/eval_vox.png)|![Second Image](./data/eval_point.png)|![third Image](./data/eval_mesh.png)|
 
 ### 2.5 Analyse effects of hyperparms variations (10 points)
 
-Due to the fact that the surfaces of the mesh model seemed so disjointed, I chose to analyze the effect of w_smooth and see if I could obtain a better result. In order to do so, I trained 4 models (10 epochs each) with the following w_smooth values: 0.01, 1.0, 2.0, 3.0, 4.0, and 5.0. Throughout this process all other parameters remailed constant and w_chamfer was set to 1.0. Note that I did have a reduce on plateau scheduler in place that may have caused some discrepancies in training process. Additionally The outcomes of my models were as follows:
+Due to the fact that the surfaces of the mesh model seemed so disjointed, I chose to analyze the effect of w_smooth and see if I could obtain a better result. In order to do so, I trained 4 models (25 epochs each) with the following w_smooth values: 0.01, 1.0, 2.0, 3.0, 4.0, and 5.0. Throughout this process all other parameters remailed constant and w_chamfer was set to 1.0. Note that I did have a reduce on plateau scheduler in place that may have caused some discrepancies in training process. The outcomes of my models were as follows:
 
-| w_smooth | 0.01 | 1.0 | 2.0 | 3.0 |
-|-------------|:--------:|:--------:|:--------:|:--------:|
-| Example 1 | ![](./data/param/model_mesh0.gif) | ![](./data/param/model_mesh0_smooth.gif)|![](./data/param/model_mesh0_smoother.gif)|![](./data/param/model_mesh0_smoothest.gif)|
-| Example 2 | ![](./data/param/model_mesh1.gif) | ![](./data/param/model_mesh1_smooth.gif)|![](./data/param/model_mesh1_smoother.gif)|![](./data/param/model_mesh1_smoothest.gif)|
-| Example 3 | ![](./data/param/model_mesh2.gif) | ![](./data/param/model_mesh2_smooth.gif)|![](./data/param/model_mesh2_smoother.gif)|![](./data/param/model_mesh2_smoothest.gif)|
-| f1@0.05 | 91.390 | 90.755 | 93.027 |90|
+| w_smooth | 0.01 | 1.0 | 2.0 | 3.0 | 4.0 | 5.0 |
+|-------------|:--------:|:--------:|:--------:|:--------:|:--------:|:--------:|
+| Example 0 | ![](./data/param/mesh0_0.gif) | ![](./data/param/mesh0_1.gif) | ![](./data/param/mesh0_2.gif) | ![](./data/param/mesh0_3.gif) | ![](./data/param/mesh0_4.gif) | ![](./data/param/mesh0_5.gif) | 
+| Example 1 | ![](./data/param/mesh1_0.gif) | ![](./data/param/mesh1_1.gif) | ![](./data/param/mesh1_2.gif) | ![](./data/param/mesh1_3.gif) | ![](./data/param/mesh1_4.gif) | ![](./data/param/mesh1_5.gif) | 
+| Example 2 | ![](./data/param/mesh2_0.gif) | ![](./data/param/mesh2_1.gif) | ![](./data/param/mesh2_2.gif) | ![](./data/param/mesh2_3.gif) | ![](./data/param/mesh2_4.gif) | ![](./data/param/mesh2_5.gif) | 
+| f1@0.05 | 91.390 | 90.755 | 93.027 | 93.036 | 93.394 | 93.521 |
 
-
+As seen, as the w_smooth value increased, there seemed to be a general trend of visual improvement and increase in F1 score. However, the improvement was definitely non-linear Note that, my aws instance had some internal issues while training my 0.01 and 1.0 model so I the training may have been cut off earlier than expected.
 
 ### 2.6 Interpret your model (15 points)
 
