@@ -98,9 +98,9 @@ Due to the fact that the surfaces of the mesh model seemed so disjointed, I chos
 
 | w_smooth | 0.01 | 1.0 | 2.0 | 3.0 | 4.0 | 5.0 |
 |-------------|:--------:|:--------:|:--------:|:--------:|:--------:|:--------:|
-| Example 0 | ![](./data/param/mesh0_0.gif) | ![](./data/param/mesh0_1.gif) | ![](./data/param/mesh0_2.gif) | ![](./data/param/mesh0_3.gif) | ![](./data/param/mesh0_4.gif) | ![](./data/param/mesh0_5.gif) | 
-| Example 1 | ![](./data/param/mesh1_0.gif) | ![](./data/param/mesh1_1.gif) | ![](./data/param/mesh1_2.gif) | ![](./data/param/mesh1_3.gif) | ![](./data/param/mesh1_4.gif) | ![](./data/param/mesh1_5.gif) | 
-| Example 2 | ![](./data/param/mesh2_0.gif) | ![](./data/param/mesh2_1.gif) | ![](./data/param/mesh2_2.gif) | ![](./data/param/mesh2_3.gif) | ![](./data/param/mesh2_4.gif) | ![](./data/param/mesh2_5.gif) | 
+| Example 0 | ![](./data/param/mesh0_0.gif) | ![](./data/param/mesh0_1.gif) | ![](./data/param/mesh0_2.gif) | ![](./data/param/mesh0_3.gif) | ![](./data/param/mesh0_4.gif) | ![](./data/mesh/model_mesh0.gif) | 
+| Example 1 | ![](./data/param/mesh1_0.gif) | ![](./data/param/mesh1_1.gif) | ![](./data/param/mesh1_2.gif) | ![](./data/param/mesh1_3.gif) | ![](./data/param/mesh1_4.gif) | ![](./data/mesh/model_mesh1.gif) | 
+| Example 2 | ![](./data/param/mesh2_0.gif) | ![](./data/param/mesh2_1.gif) | ![](./data/param/mesh2_2.gif) | ![](./data/param/mesh2_3.gif) | ![](./data/param/mesh2_4.gif) | ![](./data/mesh/model_mesh2.gif) | 
 | f1@0.05 | 91.390 | 90.755 | 93.027 | 93.036 | 93.394 | 93.521 |
 
 As seen, as the w_smooth value increased, there seemed to be a general trend of visual improvement and increase in F1 score. However, the improvement was definitely non-linear Note that, my aws instance had some internal issues while training my 0.01 and 1.0 model so I the training may have been cut off earlier than expected.
@@ -113,24 +113,24 @@ As I watched my models train, I noticed that the models seemed to first learn to
 
 First, detailed designs. These are cases in which the seats have relatively intricate designs or unusual decorations which is seems to confuse the model as they have no consistent representation within the dataset, these instances usually result in a very generic chair shaped output that ignore the details.
 
-| label | example 1 | example 2 | example 3 | example 4 |
-|-------------|:--------:|:--------:|:--------:|:--------:|
-| target | ![](./data/edge/chair_0_t.gif) | ![](./data/edge/chair_1_t.gif) | ![](./data/edge/chair_2_t.gif) | ![](./data/edge/chair_3_t.gif) |
-| prediction | ![](./data/edge/chair_0.gif) | ![](./data/edge/chair_1.gif) | ![](./data/edge/chair_2.gif) | ![](./data/edge/chair_3.gif) |
+| label | example 1 | example 2 | example 3 |
+|-------------|:--------:|:--------:|:--------:|
+| target | ![](./data/edge/chair_0_t.gif) | ![](./data/edge/chair_1_t.gif) | ![](./data/edge/chair_2_t.gif) | 
+| prediction | ![](./data/edge/chair_0.gif) | ![](./data/edge/chair_1.gif) | ![](./data/edge/chair_2.gif) |
 
 Second, unique legs. These are cases in which the seats have uncommon leg designs. While the model is very good at predicting, and defaults to having, either a generic four legged chairs or some sort of single support seat, it struggles to identify orther characteristics like rollers, thin leg, or unique shaped supports. Note that this effect is especially prominent with thin legs and could be at least partially attributed to the fact that, because they take up so little space, they are unlikely to be well sampled in the training process and thus difficult for the model to learn.
 
-| label | example 1 | example 2 | example 3 | example 4 |
-|-------------|:--------:|:--------:|:--------:|:--------:|
-| target | ![](./data/edge/leg_0_t.gif) | ![](./data/edge/leg_1_t.gif) | ![](./data/edge/leg_2_t.gif) | ![](./data/edge/leg_3_t.gif) |
-| prediction | ![](./data/edge/leg_0.gif) | ![](./data/edge/leg_1.gif) | ![](./data/edge/leg_2.gif) | ![](./data/edge/leg_3.gif) |
+| label | example 1 | example 2 | example 3 | 
+|-------------|:--------:|:--------:|:--------:|
+| target | ![](./data/edge/leg_0_t.gif) | ![](./data/edge/leg_2_t.gif) | ![](./data/edge/leg_3_t.gif) |
+| prediction | ![](./data/edge/leg_0.gif) | ![](./data/edge/leg_2.gif) | ![](./data/edge/leg_3.gif) |
 
 Third, oddly shapped seats. These are cases in which the seats does not follow the general form factor of the rest of the examples. In these cases, the "defaulting" behavior is especially prominent. Whenever, the model encounters these unusual seats it seems to default to a few generic features of chairs such as arm rests, flat (and mostly square) backs, and some sort of perpendicular support. Thus, the resulting prediction looks somewhat like a chair, just not the chair being targetted.
 
-| label | example 1 | example 2 | example 3 | example 4 |
-|-------------|:--------:|:--------:|:--------:|:--------:|
-| target | ![](./data/edge/wierd_0_t.gif) | ![](./data/edge/wierd_1_t.gif) | ![](./data/edge/wierd_2_t.gif) | ![](./data/edge/wierd_3_t.gif) |
-| prediction | ![](./data/edge/wierd_0.gif) | ![](./data/edge/wierd_1.gif) | ![](./data/edge/wierd_2.gif) | ![](./data/edge/wierd_3.gif) |
+| label | example 1 | example 2 | example 3 |
+|-------------|:--------:|:--------:|:--------:|
+| target | ![](./data/edge/wierd_0_t.gif) | ![](./data/edge/wierd_2_t.gif) | ![](./data/edge/wierd_3_t.gif) |
+| prediction | ![](./data/edge/wierd_0.gif) | ![](./data/edge/wierd_2.gif) | ![](./data/edge/wierd_3.gif) |
 
 
 ## 3. (Extra Credit) Exploring some recent architectures.
