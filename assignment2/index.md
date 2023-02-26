@@ -70,7 +70,7 @@ Visuals of any three examples in the test set. For each example show the input R
 |![First Image](./data/gt_image_2.png)|![Second Image](./data/mesh/model_mesh_t1.gif)|![third Image](./data/mesh/model_mesh1.gif)|
 |![First Image](./data/gt_image_5.png)|![Second Image](./data/mesh/model_mesh_t2.gif)|![third Image](./data/mesh/model_mesh2.gif)|
 
-The mesh model I implemented was a simple FCL model which was run for *** epochs. Similarly to the point cloud model, I had tried expanding the model to be larger and, again, found that this simple model outperformed all deeper, wider, and more complex (with convolution) models.
+The mesh model I implemented was a simple FCL model which was run for 25 epochs. Similarly to the point cloud model, I had tried expanding the model to be larger and, again, found that this simple model outperformed all deeper, wider, and more complex (with convolution) models.
 
 ### 2.4 Quantitative comparisions(10 points)
 
