@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 from implicit import volume_dict
 from sampler import sampler_dict
 from renderer import renderer_dict
+from render_functions import render_points
 from ray_utils import (
     sample_images_at_xy,
     get_pixels_from_image,
@@ -99,19 +100,19 @@ def render_images(
         # TODO (1.3): Visualize xy grid using vis_grid
         if cam_idx == 0 and file_prefix == '':
             xy_vis = vis_grid(xy_grid, image_size)
-            # plt.imsave(f'images/xy_vis_{cam_idx}.png',xy_vis)
+            plt.imsave(f'images/xy_vis_{cam_idx}.png',xy_vis)
 
         # TODO (1.3): Visualize rays using vis_rays
         if cam_idx == 0 and file_prefix == '':
             rays = vis_rays(ray_bundle, image_size)
-            # plt.imsave(f'images/rays_{cam_idx}.png', rays)
+            plt.imsave(f'images/rays_{cam_idx}.png', rays)
         
         # TODO (1.4): Implement point sampling along rays in sampler.py
-        pass
+        ray_bundle = model.sampler.forward(ray_bundle)
 
         # TODO (1.4): Visualize sample points as point cloud
         if cam_idx == 0 and file_prefix == '':
-            pass
+            render_points(f'images/point_samp_{cam_idx}.png', ray_bundle.sample_points.view(-1,3).unsqueeze(0), image_size=256, color=[0.7, 0.7, 1], device=device)
 
         # TODO (1.5): Implement rendering in renderer.py
         out = model(ray_bundle)
