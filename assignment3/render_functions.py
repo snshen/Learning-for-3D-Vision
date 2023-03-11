@@ -85,7 +85,7 @@ def render_points(filename, points, image_size=256, color=[0.7, 0.7, 1], device=
     # faces = faces.unsqueeze(0)  # (N_f, 3) -> (1, N_f, 3)
     textures = torch.ones(points.size()).to(device)*0.5   # (1, N_v, 3)
     rgb = textures * torch.tensor(color).to(device)  # (1, N_v, 3)
-    print("POINT SIZE", points.shape)
+    
     point_cloud = pytorch3d.structures.pointclouds.Pointclouds(
         points=points, features=rgb
     )
