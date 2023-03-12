@@ -96,12 +96,14 @@ def render_images(
         camera = camera.to(device)
         xy_grid = get_pixels_from_image(image_size, camera) # TODO (1.3): implement in ray_utils.py
         ray_bundle = get_rays_from_pixels(xy_grid, image_size, camera) # TODO (1.3): implement in ray_utils.py
-
+        del camera
+        torch.cuda.empty_cache()
         # TODO (1.3): Visualize xy grid using vis_grid
         if cam_idx == 0 and file_prefix == '':
             xy_vis = vis_grid(xy_grid, image_size)
             plt.imsave(f'images/xy_vis_{cam_idx}.png',xy_vis)
-
+        del xy_grid
+        torch.cuda.empty_cache()
         # TODO (1.3): Visualize rays using vis_rays
         if cam_idx == 0 and file_prefix == '':
             rays = vis_rays(ray_bundle, image_size)
@@ -116,6 +118,8 @@ def render_images(
 
         # TODO (1.5): Implement rendering in renderer.py
         out = model(ray_bundle)
+        del ray_bundle
+        torch.cuda.empty_cache()
 
         # Return rendered features (colors)
         image = np.array(

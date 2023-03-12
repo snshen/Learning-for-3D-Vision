@@ -232,36 +232,37 @@ class NeuralRadianceField(torch.nn.Module):
         embedding_dim_xyz = self.harmonic_embedding_xyz.output_dim
         embedding_dim_dir = self.harmonic_embedding_dir.output_dim
 
-        hidden_dims = [256, 128]
+        hidden_dims = [cfg.n_hidden_neurons_xyz, cfg.n_hidden_neurons_dir]
+        self.layers_xyz_init = torch.nn.Linear(embedding_dim_xyz, hidden_dims[0])
 
         self.layers_xyz = torch.nn.ModuleList()
-        for layeri in range(8):
+        for layeri in range(cfg.n_layers_xyz):
             if layeri == 0:
-                self.layers_xyz.append(torch.nn.Linear(embedding_dim_xyz, 256))
+                self.layers_xyz.append(self.layers_xyz_init)
             elif layeri == 4:
-                self.layers_xyz.append(torch.nn.Linear(embedding_dim_xyz+256, 256))
+                self.layers_xyz.append(torch.nn.Linear(embedding_dim_xyz+hidden_dims[0], hidden_dims[0]))
             else:
-                self.layers_xyz.append(torch.nn.Linear(256, 256))
+                self.layers_xyz.append(torch.nn.Linear(hidden_dims[0], hidden_dims[0]))
         self.relu = torch.nn.ReLU()
 
         self.layer_sigma = torch.nn.Sequential(
-                torch.nn.Linear(256, 1),
+                torch.nn.Linear(hidden_dims[0], 1),
                 torch.nn.ReLU()
             )
         
         self.layer_feature = torch.nn.Sequential(
-                torch.nn.Linear(256, 256),
+                torch.nn.Linear(hidden_dims[0], hidden_dims[0]),
                 torch.nn.ReLU()
             )
         
         self.layers_dir = torch.nn.Sequential(
-                torch.nn.Linear(embedding_dim_dir+256, 128),
+                torch.nn.Linear(embedding_dim_dir+hidden_dims[0], hidden_dims[1]),
                 torch.nn.ReLU(),
-                torch.nn.Linear(128, 3),
+                torch.nn.Linear(hidden_dims[1], 3),
                 torch.nn.Sigmoid()
             )
-
-        pass
+        
+        torch.nn.init.xavier_normal_(self.layers_xyz_init.weight)
 
     def forward(self, ray_bundle):
         

@@ -12,7 +12,7 @@ training:
 
   checkpoint_path: ./checkpoints
   checkpoint_interval: 50
-  resume: True
+  resume: False
 
   render_interval: 10
 
@@ -27,7 +27,7 @@ renderer:
 
 sampler:
   type: stratified
-  n_pts_per_ray: 128
+  n_pts_per_ray: 96
 
   min_depth: 2.0
   max_depth: 6.0

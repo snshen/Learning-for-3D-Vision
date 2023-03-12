@@ -51,7 +51,7 @@ The code renders a spiral sequence of the optimized volume in `images/part_2.gif
 
 Spiral rendering of bulldozer results
 
-![Spiral Rendering of Part 3](images/part_3.gif)
+![Spiral Rendering of Part 3](images/part_3_og.gif)
 
 ##  4. NeRF Extras (***Choose at least one!*** More than one is extra credit)
 
@@ -61,10 +61,21 @@ I had completed this step while implementing part 3 since I was closely followin
 
 The trade-offs between increased view dependence and generalization quality.
 
+![Spiral Rendering of Part 3](images/part_3_og.gif)
+
 ###  4.2 Hierarchical Sampling (10 pts)
 
 NeRF employs two networks: a coarse network and a fine network. During the coarse pass, it uses the coarse network to get an estimate of geometry geometry, and during fine pass uses these geometry estimates for better point sampling for the fine network. Implement this hierarchical point-sampling strategy and discuss trade-offs (speed / quality).
 
 ###  4.3 High Resolution Imagery (10 pts)
 
-Run NeRF on high-res imagery using the `nerf_lego_highres.yaml` config file. This will take a long time to train -- play around with some hyper parameters (point samples per ray, network capacity) and report your results
+I ran the NeRF on high-res imagery using the `nerf_lego_highres.yaml` config file. Without changing any other parameters, I varied the point samples per ray and obtained the following results
+
+|Points Per Ray|Output|
+|:-:|:-:|
+|32|<img src="images/part_3_32.gif">|
+|64|<img src="images/part_3_64.gif">|
+|96|<img src="images/part_3_96.gif">|
+|128|<img src="images/part_3_hi.gif">|
+
+As seen, as the number of samples per ray increase the quality of the 
