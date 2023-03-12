@@ -196,15 +196,15 @@ def train(
             camera = camera.cuda()
 
             # Sample rays
-            xy_grid = get_random_pixels_from_image(cfg.training.batch_size, image_size, camera) # TODO (2.1): implement in ray_utils.py
+            xy_grid = get_random_pixels_from_image(cfg.training.batch_size, image_size, camera).cuda() # TODO (2.1): implement in ray_utils.py
             ray_bundle = get_rays_from_pixels(xy_grid, image_size, camera)
-            rgb_gt = sample_images_at_xy(image, xy_grid)
+            rgb_gt = sample_images_at_xy(image, xy_grid).cuda()
 
             # Run model forward
             out = model(ray_bundle)
 
             # TODO (2.2): Calculate loss
-            loss = None
+            loss = torch.nn.functional.mse_loss(out['feature'], rgb_gt)
 
             # Backprop
             optimizer.zero_grad()

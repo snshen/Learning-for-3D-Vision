@@ -107,10 +107,10 @@ def get_random_pixels_from_image(n_pixels, image_size, camera):
     xy_grid = get_pixels_from_image(image_size, camera)
     
     # TODO (2.1): Random subsampling of pixel coordinates
-    pass
+    indices = torch.randperm(len(xy_grid))[:n_pixels]
 
     # Return
-    return xy_grid_sub.reshape(-1, 2)[:n_pixels]
+    return xy_grid[indices, :]
 
 
 # Get rays from pixel values
