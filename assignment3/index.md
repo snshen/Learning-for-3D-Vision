@@ -57,7 +57,9 @@ Spiral rendering of bulldozer results
 
 ###  4.1 View Dependence (10 pts)
 
-Add view dependence to your NeRF model! Specifically, make it so that emission can vary with viewing direction. You can NeRF or other papers for how to do this effectively --- if you're not careful, your network may overfit to the training images. Discuss the trade-offs between increased view dependence and generalization quality.
+I had completed this step while implementing part 3 since I was closely following the NeRF paper according to its supplementary material (Appendix A) which included view dependence. 
+
+The trade-offs between increased view dependence and generalization quality.
 
 ###  4.2 Hierarchical Sampling (10 pts)
 

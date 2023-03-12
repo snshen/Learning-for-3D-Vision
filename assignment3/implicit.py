@@ -235,30 +235,60 @@ class NeuralRadianceField(torch.nn.Module):
         hidden_dims = [256, 128]
 
         self.layers_xyz = torch.nn.ModuleList()
-        self.layers_xyz.append(torch.nn.Linear(embedding_dim_xyz, 256))
-        for _ in range(1, 8):
-            self.layers_xyz.append(torch.nn.Linear(256, 256))
+        for layeri in range(8):
+            if layeri == 0:
+                self.layers_xyz.append(torch.nn.Linear(embedding_dim_xyz, 256))
+            elif layeri == 4:
+                self.layers_xyz.append(torch.nn.Linear(embedding_dim_xyz+256, 256))
+            else:
+                self.layers_xyz.append(torch.nn.Linear(256, 256))
+        self.relu = torch.nn.ReLU()
 
-        self.layer_sigma = torch.nn.Linear(256, 1)
+        self.layer_sigma = torch.nn.Sequential(
+                torch.nn.Linear(256, 1),
+                torch.nn.ReLU()
+            )
         
-        self.layers_dir = torch.nn.ModuleList()
-        self.layers_dir.append(torch.nn.Linear(embedding_dim_dir, 128))
-        self.layers_dir.append(torch.nn.Linear(128, 3))
+        self.layer_feature = torch.nn.Sequential(
+                torch.nn.Linear(256, 256),
+                torch.nn.ReLU()
+            )
+        
+        self.layers_dir = torch.nn.Sequential(
+                torch.nn.Linear(embedding_dim_dir+256, 128),
+                torch.nn.ReLU(),
+                torch.nn.Linear(128, 3),
+                torch.nn.Sigmoid()
+            )
 
         pass
 
     def forward(self, ray_bundle):
+        
         # first processes the input 3D coordinate x with 8 fully-connected layers (using ReLU activations and 256 channels per layer)
-        x = self.harmonic_embedding_xyz(ray_bundle.sample_points)
-        for _, layer in enumerate(self.layers_xyz):
+        x = ray_bundle.sample_points
+        harmonic_xyz = self.harmonic_embedding_xyz(x)
+        
+        for layeri, layer in enumerate(self.layers_xyz):
+            if layeri == 0: x = harmonic_xyz
+            elif layeri == 4: x = torch.cat((harmonic_xyz, x), dim=-1)
+
             x = layer(x)
+
+            if layeri != 7: x = self.relu(x)
+
         # outputs σ and a 256-dimensional feature vector
         sigma = self.layer_sigma(x)
+        feature = self.layer_feature(x)
+
         # feature vector is concatenated with the camera ray’s viewing direction and passed to fully-connected layer (using a ReLU activation and 128 channels) 
-        x = self.harmonic_embedding_dir(x)
         # output the view-dependent RGB color
-        
-        return x
+        harmonic_dir = self.harmonic_embedding_dir(ray_bundle.directions).unsqueeze(1)
+        harmonic_dir = torch.tile(harmonic_dir, (1, feature.shape[1], 1))
+        x = torch.cat((harmonic_dir, feature), dim=-1)
+        rgb =  self.layers_dir(x)
+
+        return {'density': sigma, 'feature': rgb}
 
 
 

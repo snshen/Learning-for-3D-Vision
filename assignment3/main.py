@@ -108,7 +108,7 @@ def render_images(
             plt.imsave(f'images/rays_{cam_idx}.png', rays)
         
         # TODO (1.4): Implement point sampling along rays in sampler.py
-        ray_bundle = model.sampler.forward(ray_bundle)
+        model.sampler.forward(ray_bundle)
 
         # TODO (1.4): Visualize sample points as point cloud
         if cam_idx == 0 and file_prefix == '':
@@ -301,9 +301,11 @@ def train_nerf(
         num_workers=0,
         collate_fn=trivial_collate,
     )
-
+    del train_dataset
     # Run the main training loop.
     for epoch in range(start_epoch, cfg.training.num_epochs):
+
+        torch.cuda.empty_cache()
         t_range = tqdm.tqdm(enumerate(train_dataloader))
 
         for iteration, batch in t_range:
@@ -314,17 +316,15 @@ def train_nerf(
             # Sample rays
             xy_grid = get_random_pixels_from_image(
                 cfg.training.batch_size, cfg.data.image_size, camera
-            )
+            ).cuda()
             ray_bundle = get_rays_from_pixels(
                 xy_grid, cfg.data.image_size, camera
             )
-            rgb_gt = sample_images_at_xy(image, xy_grid)
-
+            rgb_gt = sample_images_at_xy(image, xy_grid).cuda()
             # Run model forward
             out = model(ray_bundle)
-
             # TODO (3.1): Calculate loss
-            loss = None
+            loss = torch.nn.functional.mse_loss(out['feature'], rgb_gt)
 
             # Take the training step.
             optimizer.zero_grad()
