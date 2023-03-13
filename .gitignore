@@ -2,3 +2,7 @@ assignment2/r2n2_shapenet_dataset/*
 */__pycache__/*
 *.pth
 */backup/*
+assignment3/outputs/*
+*checkpoint*
+assignment3/data/*
+

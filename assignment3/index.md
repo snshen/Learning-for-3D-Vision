@@ -1,14 +1,7 @@
 # Assignment 3: Volume Rendering and Neural Radiance Fields
 number or late days used:
-<img src="./data/zero.png"  width="5%">
+<img src="./data/zero.png"  width="3%">
 
-# A. Theory 
-## Transmittance Calculation (10 points)
-
-![Transmittance computation](transmittance_calculation/figure1.png)
-
-
-# B. Implementation
 
 ##  1.3. Ray sampling (10 points)
 
@@ -18,12 +11,13 @@ The outputs of grid/ray visualization:
 
 ##  1.4. Point sampling (10 points)
 
-Visualize the point samples from the first camera.
+Visualization of the point samples from the first camera:
 
 ![Sample points](images/point_samp_0.png)
 
 ##  1.5. Volume rendering (30 points)
-Spiral rendering and visualization of the depth in your write-up.
+
+Part 1 visualization and depth visualization:
 
 ![Spiral Rendering of Part 1](images/part_1.gif) ![Spiral Rendering of Part 1](images/depth_2.png)
 
@@ -32,40 +26,41 @@ Spiral rendering and visualization of the depth in your write-up.
 
 ##  2.1. Random ray sampling (5 points)
 
-Implemented in `get_random_pixels_from_image` method in `ray_utils.py` 
+Implemented in `get_random_pixels_from_image` method in `ray_utils.py`.
 
 ##  2.2. Loss and training (5 points)
 
-Center of the box, and the side lengths of the box after training, rounded to the nearest `1/100` decimal place:
+After optimizing the position and side lengths of a box, I found the center of the box and the side lengths of the box (rounded to the nearest `1/100` decimal place) to be the following:
+
 - Box center: (0.25, 0.25, 0.00)
 - Box side lengths: (2.00, 1.50, 1.50)
 
 ##  2.3. Visualization
 
-The code renders a spiral sequence of the optimized volume in `images/part_2.gif`. Compare this gif to the one below, and attach it in your write-up:
+After implementing loss, I rendered a spiral sequence of the optimized volume in `images/part_2.gif` and compare the result to the GIF provided in the writeup:
 
-![Spiral Rendering of Part 2](images/part_2.gif)
+|Provided GIF|My Output|
+|:-:|:-:|
+|<img src="ta_images/part_2.gif">|<img src="images/part_2.gif">|
 
 
 ##  3. Optimizing a Neural Radiance Field (NeRF) (30 points)
 
-Spiral rendering of bulldozer results
+After implementing the NeRF model as described in the paper (without heirarchical sampling), I rendered a spiral sequence of the lego bulldozer and compared the result to the GIF provided in the writeup:
 
-![Spiral Rendering of Part 3](images/part_3_og.gif)
+|Provided GIF|My Output|
+|:-:|:-:|
+|<img src="ta_images/part_3.gif">|<img src="images/part_3_og.gif">|
 
 ##  4. NeRF Extras (***Choose at least one!*** More than one is extra credit)
 
 ###  4.1 View Dependence (10 pts)
 
-I had completed this step while implementing part 3 since I was closely following the NeRF paper according to its supplementary material (Appendix A) which included view dependence. 
+I had completed this section while implementing part 3 since I was closely following the NeRF paper according to its supplementary material (Appendix A) which included view dependence, positional encoding, and a skip connection. 
 
-The trade-offs between increased view dependence and generalization quality.
+As suggested by the name, view dependence can allow the model to better represent qualities of the model that depend on the direction it is being view in, the most notable trait being specular reflection on materials. By integrating view dependence, the model can represent how the same point in the model can change in color depending on the viewing direction. On the otherhand, with a skewed or small sample size during training, the model could also overfit to a certain training sample and cause the final model to take on properties that are not generalizable, e.g. training the model on images where white light is reflecting off a metallic surface may cause the model to render the surface as white even though the object is a different color when not reflecting light.
 
 ![Spiral Rendering of Part 3](images/part_3_og.gif)
-
-###  4.2 Hierarchical Sampling (10 pts)
-
-NeRF employs two networks: a coarse network and a fine network. During the coarse pass, it uses the coarse network to get an estimate of geometry geometry, and during fine pass uses these geometry estimates for better point sampling for the fine network. Implement this hierarchical point-sampling strategy and discuss trade-offs (speed / quality).
 
 ###  4.3 High Resolution Imagery (10 pts)
 
@@ -78,4 +73,4 @@ I ran the NeRF on high-res imagery using the `nerf_lego_highres.yaml` config fil
 |96|<img src="images/part_3_96.gif">|
 |128|<img src="images/part_3_hi.gif">|
 
-As seen, as the number of samples per ray increase the quality of the 
+As seen, as the number of samples per ray increase the resolution of the final output also increases, even with extended training time. This result intuitively makes sense as the number of samples decrease, the samples become more spread apart and are less capable of representing details accurately.
