@@ -1,6 +1,6 @@
 seed: 1
 
-type: train_nerf
+type: train_heirarchy
 
 training:
   num_epochs: 250
@@ -27,7 +27,8 @@ renderer:
 
 sampler:
   type: stratified
-  n_pts_per_ray: 128
+  n_pts_per_ray: 64
+  n_pts_mult: 2
 
   min_depth: 2.0
   max_depth: 6.0

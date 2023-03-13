@@ -369,6 +369,107 @@ def train_nerf(
                 )
                 imageio.mimsave('images/part_3.gif', [np.uint8(im * 255) for im in test_images])
 
+def train_heir(cfg):
+    # Create model
+    cfg_c = cfg
+    cfg_f = cfg
+    cfg_f.sampler.n_pts_per_ray = cfg_f.sampler.n_pts_per_ray*cfg_f.sampler.n_pts_mult
+    del cfg
+    torch.cuda.empty_cache()
+
+    model_c, optimizer_c, lr_scheduler_c, _, _ = create_model(cfg_c)
+    model_f, optimizer_f, lr_scheduler_f, start_epoch, checkpoint_path = create_model(cfg_f)
+
+    # Load the training/validation data.
+    train_dataset_c, _ , _ = get_nerf_datasets(
+        dataset_name=cfg_c.data.dataset_name,
+        image_size=[cfg_c.data.image_size[1], cfg.data.image_size[0]],
+    )
+
+    train_dataloader_c = torch.utils.data.DataLoader(
+        train_dataset_c,
+        batch_size=1,
+        shuffle=True,
+        num_workers=0,
+        collate_fn=trivial_collate,
+    )
+    del train_dataset_c
+    torch.cuda.empty_cache()
+
+    train_dataset_f, _ , _ = get_nerf_datasets(
+        dataset_name=cfg_f.data.dataset_name,
+        image_size=[cfg_f.data.image_size[1], cfg.data.image_size[0]],
+    )
+
+    train_dataloader_f = torch.utils.data.DataLoader(
+        train_dataset_f,
+        batch_size=1,
+        shuffle=True,
+        num_workers=0,
+        collate_fn=trivial_collate,
+    )
+    del train_dataset_f
+    torch.cuda.empty_cache()
+
+    # Run the main training loop.
+    for epoch in range(start_epoch, cfg_c.training.num_epochs):
+
+        torch.cuda.empty_cache()
+        t_range = tqdm.tqdm(enumerate(zip(train_dataloader_c, train_dataloader_f)))
+
+        for iteration, (batch_c, batch_f) in t_range:
+
+            image, camera, _ = batch_c[0].values()
+            image = image.cuda().unsqueeze(0)
+            camera = camera.cuda()
+
+            # Sample rays
+            xy_grid = get_random_pixels_from_image(cfg_c.training.batch_size, cfg_c.data.image_size, camera).cuda()
+            ray_bundle_c = get_rays_from_pixels(xy_grid, cfg_c.data.image_size, camera)
+            rgb_gt_c = sample_images_at_xy(image, xy_grid).cuda()
+            # Run model forward
+            out_c = model_c(ray_bundle_c)
+
+            image, camera, _ = batch_f[0].values()
+            image = image.cuda().unsqueeze(0)
+            camera = camera.cuda()
+
+            # Sample rays
+            xy_grid = get_random_pixels_from_image(cfg_f.training.batch_size, cfg_f.data.image_size, camera).cuda()
+            ray_bundle_f = get_rays_from_pixels(xy_grid, cfg_f.data.image_size, camera)
+            rgb_gt_f = sample_images_at_xy(image, xy_grid).cuda()
+            # Run model forward
+
+            out_f = model_f(ray_bundle_f)
+            # TODO (3.1): Calculate loss
+            loss = torch.nn.functional.mse_loss(out_c['feature'], rgb_gt_c) + torch.nn.functional.mse_loss(out_f['feature'], rgb_gt_f)
+
+            # Take the training step.
+            optimizer_c.zero_grad()
+            optimizer_f.zero_grad()
+            loss.backward()
+            optimizer_c.step()
+            optimizer_f.step()
+
+            t_range.set_description(f'Epoch: {epoch:04d}, Loss: {loss:.06f}')
+            t_range.refresh()
+
+        # Adjust the learning rate.
+        lr_scheduler_c.step()
+        lr_scheduler_f.step()
+
+        # Render
+        if (
+            epoch % cfg_f.training.render_interval == 0
+            and epoch > 0
+        ):
+            with torch.no_grad():
+                test_images = render_images(
+                    model_f, create_surround_cameras(4.0, n_poses=20, up=(0.0, 0.0, 1.0), focal_length=2.0),
+                    cfg_f.data.image_size, file_prefix='nerf'
+                )
+                imageio.mimsave('images/part_4.gif', [np.uint8(im * 255) for im in test_images])
+
 
 @hydra.main(config_path='./configs', config_name='sphere')
 def main(cfg: DictConfig):
@@ -380,6 +481,8 @@ def main(cfg: DictConfig):
         train(cfg)
     elif cfg.type == 'train_nerf':
         train_nerf(cfg)
+    elif cfg.type == 'train_heirarchy':
+        train_heir(cfg)
 
 
 if __name__ == "__main__":
