@@ -6,3 +6,4 @@ assignment3/outputs/*
 *checkpoint*
 assignment3/data/*
 
+*.DS_Store*

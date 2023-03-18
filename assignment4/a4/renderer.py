@@ -19,6 +19,7 @@ class SphereTracingRenderer(torch.nn.Module):
         self.near = cfg.near
         self.far = cfg.far
         self.max_iters = cfg.max_iters
+        self.epsilon = 1
     
     def sphere_tracing(
         self,
@@ -41,7 +42,14 @@ class SphereTracingRenderer(torch.nn.Module):
         #   in order to compute intersection points of rays with the implicit surface
         # 2) Maintain a mask with the same batch dimension as the ray origins,
         #   indicating which points hit the surface, and which do not
-        pass
+        points = origins
+
+        for iter in self.max_iters:
+            distances = implicit_fn(points)
+            points= points.unsqueeze(1) + torch.einsum('mi,m->mi', directions, distances)
+
+        mask = torch.norm(implicit_fn(points), dim=1).le(self.epsilon)
+        return points, mask
 
     def forward(
         self,
