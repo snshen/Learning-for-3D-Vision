@@ -11,7 +11,8 @@ from a4.lighting_functions import relighting_dict
 class SphereTracingRenderer(torch.nn.Module):
     def __init__(
         self,
-        cfg
+        cfg,
+        epsilon = 1
     ):
         super().__init__()
 
@@ -19,7 +20,7 @@ class SphereTracingRenderer(torch.nn.Module):
         self.near = cfg.near
         self.far = cfg.far
         self.max_iters = cfg.max_iters
-        self.epsilon = 1
+        self.epsilon = epsilon
     
     def sphere_tracing(
         self,
@@ -43,7 +44,7 @@ class SphereTracingRenderer(torch.nn.Module):
         # 2) Maintain a mask with the same batch dimension as the ray origins,
         #   indicating which points hit the surface, and which do not
         points = origins
-        
+
         for _ in range(self.max_iters):
             distances = implicit_fn(points)
             points = points + torch.einsum('mi,mj->mi', directions, distances)

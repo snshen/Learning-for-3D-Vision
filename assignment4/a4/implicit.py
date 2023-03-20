@@ -229,10 +229,71 @@ class NeuralSurface(torch.nn.Module):
     def __init__(
         self,
         cfg,
+        dropout = 0.2
     ):
         super().__init__()
-        # TODO (Q2): Implement Neural Surface MLP to output per-point SDF
-        # TODO (Q3): Implement Neural Surface MLP to output per-point color
+        
+        self.harmonic_embedding_xyz = HarmonicEmbedding(3, cfg.n_harmonic_functions_xyz)
+        
+        embedding_dim_xyz = self.harmonic_embedding_xyz.output_dim
+
+        self.n_dist = cfg.n_layers_distance
+        self.n_color = cfg.n_layers_color
+
+        hidden_dims = [cfg.n_hidden_neurons_distance, cfg.n_hidden_neurons_color]
+        self.layers_color_init = torch.nn.Linear(embedding_dim_xyz, hidden_dims[1])
+        torch.nn.init.xavier_normal_(self.layers_color_init.weight)
+
+        self.layers_dist = torch.nn.ModuleList()
+        for layeri in range(self.n_dist):
+            if layeri == 0:
+                layer = torch.nn.Linear(embedding_dim_xyz, hidden_dims[0])
+                torch.nn.init.xavier_normal_(layer.weight)
+                self.layers_dist.append(layer)
+            elif layeri == 4:
+                layer = torch.nn.Linear(embedding_dim_xyz+hidden_dims[0], hidden_dims[0])
+                torch.nn.init.xavier_normal_(layer.weight)
+                self.layers_dist.append(layer)
+            else:
+                layer = torch.nn.Linear(hidden_dims[0], hidden_dims[0])
+                torch.nn.init.xavier_normal_(layer.weight)
+                self.layers_dist.append(layer)
+        self.relu = torch.nn.ReLU()
+
+        self.layer_sigma = torch.nn.Sequential(
+                torch.nn.Linear(hidden_dims[0], 1),
+                torch.nn.ReLU()
+            )
+        
+        self.layer_feature = torch.nn.Sequential(
+                torch.nn.Linear(hidden_dims[0], hidden_dims[0]),
+                torch.nn.ReLU()
+            )
+        
+        self.layers_color = torch.nn.ModuleList()
+        for layeri in range(self.n_color):
+            if layeri == 0:
+                layer = torch.nn.Linear(embedding_dim_xyz, hidden_dims[1])
+                torch.nn.init.xavier_normal_(layer.weight)
+                self.layers_color.append(layer)
+            else:
+                layer = torch.nn.Linear(hidden_dims[1], hidden_dims[1])
+                torch.nn.init.xavier_normal_(layer.weight)
+                self.layers_color.append(layer)
+        
+        layer = torch.nn.Linear(hidden_dims[1], 3)
+        torch.nn.init.xavier_normal_(layer.weight)
+        self.layers_color.append(layer)
+
+        self.sigmoid = torch.nn.Sigmoid()
+        
+        # self.layers_color = torch.nn.Sequential(
+        #         torch.nn.Linear(embedding_dim_xyz+hidden_dims[0], hidden_dims[1]),
+        #         torch.nn.ReLU(),
+        #         torch.nn.Linear(hidden_dims[1], 3),
+        #         torch.nn.Sigmoid()
+        #     )
+        
 
     def get_distance(
         self,
@@ -243,8 +304,22 @@ class NeuralSurface(torch.nn.Module):
         Output:
             distance: N X 1 Tensor, where N is number of input points
         '''
-        points = points.view(-1, 3)
-        pass
+        x = points.view(-1, 3)
+        harmonic_xyz = self.harmonic_embedding_xyz(x)
+        
+        for layeri, layer in enumerate(self.layers_dist):
+            if layeri == 0: x = harmonic_xyz
+            elif layeri == 4: x = torch.cat((harmonic_xyz, x), dim=-1)
+
+            x = layer(x)
+
+            if layeri != self.n_dist-1: x = self.relu(x)
+        
+
+        sigma = self.layer_sigma(x)
+        self.feature = self.layer_feature(x)
+        
+        return sigma
     
     def get_color(
         self,
@@ -255,8 +330,19 @@ class NeuralSurface(torch.nn.Module):
         Output:
             distance: N X 3 Tensor, where N is number of input points
         '''
-        points = points.view(-1, 3)
-        pass
+        x = points.view(-1, 3)
+        harmonic_xyz = self.harmonic_embedding_xyz(x)
+
+        for layeri, layer in enumerate(self.layers_color):
+            if layeri == 0: x = harmonic_xyz
+
+            x = layer(x)
+
+            if layeri != self.n_color-1: x = self.relu(x)
+
+        x = self.sigmoid(x)
+        
+        return x
     
     def get_distance_color(
         self,
