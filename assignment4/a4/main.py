@@ -234,7 +234,7 @@ def train_points(
 
             # Get distances and enforce point cloud loss
             distances, gradients = model.implicit_fn.get_distance_and_gradient(points)
-            loss = torch.sum(distances)/cfg.training.batch_size # TODO (Q2): Point cloud SDF loss on distances
+            loss = torch.sum(torch.square(distances))/cfg.training.batch_size # TODO (Q2): Point cloud SDF loss on distances
             point_loss = loss
 
             # Sample random points in bounding box
@@ -335,6 +335,24 @@ def train_images(
     # Pretrain SDF
     pretrain_sdf(cfg, model)
 
+    #######
+    test_images = render_images(
+        model, create_surround_cameras(4.0, n_poses=20, up=(0.0, 0.0, 1.0), focal_length=2.0),
+        cfg.data.image_size, file_prefix='volsdf'
+    )
+    imageio.mimsave('images/part_3.gif', [np.uint8(im * 255) for im in test_images])
+
+    try:
+        test_images = render_geometry(
+            model, create_surround_cameras(4.0, n_poses=20, up=(0.0, 0.0, 1.0), focal_length=2.0),
+            cfg.data.image_size, file_prefix='volsdf_geometry'
+        )
+        imageio.mimsave('images/part_3_geometry.gif', [np.uint8(im * 255) for im in test_images])
+    except Exception as e:
+        print("Empty mesh")
+        pass
+    #######
+
     # Run the main training loop.
     for epoch in range(start_epoch, cfg.training.num_epochs):
         t_range = tqdm.tqdm(enumerate(train_dataloader))
@@ -358,8 +376,7 @@ def train_images(
 
             # Color loss
             loss = torch.mean(torch.square(rgb_gt - out['color']))
-            print("color loss:", loss)
-            image_loss = loss
+            image_loss = torch.clone(loss)
 
             # Sample random points in bounding box
             eikonal_points = get_random_points(
@@ -376,7 +393,7 @@ def train_images(
             loss.backward()
             optimizer.step()
 
-            t_range.set_description(f'Epoch: {epoch:04d}, Loss: {image_loss:.06f}')
+            t_range.set_description(f'Epoch: {epoch:04d}, Loss: {loss:.06f}, image_Loss: {image_loss:.06f}, eikonal_loss: {(loss-image_loss):.06f}')
             t_range.refresh()
 
         # Adjust the learning rate.

@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 def eikonal_loss(gradients):
     # TODO (Q2): Implement eikonal loss on Nx3 gradients
-    loss = torch.abs(torch.norm(gradients, dim=1, keepdim=True)-1).mean()
+    loss = torch.square(torch.norm(gradients, dim=1, keepdim=True)-1).mean()
 
     return loss
 

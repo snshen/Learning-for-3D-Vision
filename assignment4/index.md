@@ -28,7 +28,9 @@ The MLP I used was based on the NeRF model and had the following architecture
 
 <img src="./images/SDF_MLP.png"  width="50%">
 
-The input vectors are shown in green, intermediate hidden layers are shown in blue, output vectors are shown in orange, and the number inside each block signifies the vector’s dimension. All layers are standard fully-connected layers, black arrows indicate layers with ReLU activations, orange arrows indicate layers with no activation, and “+” denotes vector concatenation. The positional encoding of the input location (γ(x)) is passed through 6 fully-connected ReLU layers, each with 128 channels. I also followed the DeepSDF architecture and include a skip connection that concatenates this input to the fifth layer’s activation. 
+The input vectors are shown in green, intermediate hidden layers are shown in blue, output vectors are shown in orange, and the number inside each block signifies the vector’s dimension. All layers are standard fully-connected layers, black arrows indicate layers with ReLU activations, orange arrows indicate layers with no activation, and “+” denotes vector concatenation. The positional encoding of the input location (γ(x)) is passed through 6 fully-connected ReLU layers, each with 128 channels. I also took inspiration from the DeepSDF architecture and include a skip connection that concatenates this input to the to the activation of the middle layer. Note that the number of harmonics in the embedding, layer dimensions, and number of layers can all be modified by the config file.
+
+For my eikonal loss, I used the absolute value of the difference between the L2 norm of the gradient and 1 (which is the taget value for the norm). For a batch input, the equation is defined as loss = mean(abs(norm(gradients-1)))
 
 ##  3. VolSDF (20 pts)
 

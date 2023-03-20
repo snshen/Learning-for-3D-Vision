@@ -244,36 +244,30 @@ class NeuralSurface(torch.nn.Module):
         self.layers_color_init = torch.nn.Linear(embedding_dim_xyz, hidden_dims[1])
         torch.nn.init.xavier_normal_(self.layers_color_init.weight)
 
+        self.skip_ind = self.n_dist//2
+
         self.layers_dist = torch.nn.ModuleList()
         for layeri in range(self.n_dist):
             if layeri == 0:
                 layer = torch.nn.Linear(embedding_dim_xyz, hidden_dims[0])
                 torch.nn.init.xavier_normal_(layer.weight)
                 self.layers_dist.append(layer)
-            elif layeri == 4:
-                layer = torch.nn.Linear(embedding_dim_xyz+hidden_dims[0], hidden_dims[0])
+            elif layeri == self.skip_ind:
+                layer = torch.nn.Linear(3+hidden_dims[0], hidden_dims[0])
                 torch.nn.init.xavier_normal_(layer.weight)
                 self.layers_dist.append(layer)
             else:
                 layer = torch.nn.Linear(hidden_dims[0], hidden_dims[0])
                 torch.nn.init.xavier_normal_(layer.weight)
                 self.layers_dist.append(layer)
+                
         self.relu = torch.nn.ReLU()
-
-        self.layer_sigma = torch.nn.Sequential(
-                torch.nn.Linear(hidden_dims[0], 1),
-                torch.nn.ReLU()
-            )
-        
-        self.layer_feature = torch.nn.Sequential(
-                torch.nn.Linear(hidden_dims[0], hidden_dims[0]),
-                torch.nn.ReLU()
-            )
+        self.layer_sigma = torch.nn.Linear(hidden_dims[0], 1)
         
         self.layers_color = torch.nn.ModuleList()
         for layeri in range(self.n_color):
             if layeri == 0:
-                layer = torch.nn.Linear(hidden_dims[0], hidden_dims[1])
+                layer = torch.nn.Linear(1+embedding_dim_xyz+hidden_dims[0], hidden_dims[1])
                 torch.nn.init.xavier_normal_(layer.weight)
                 self.layers_color.append(layer)
             else:
@@ -299,11 +293,12 @@ class NeuralSurface(torch.nn.Module):
             distance: N X 1 Tensor, where N is number of input points
         '''
         x = points.view(-1, 3)
+        xyz = x
         harmonic_xyz = self.harmonic_embedding_xyz(x)
         
         for layeri, layer in enumerate(self.layers_dist):
             if layeri == 0: x = harmonic_xyz
-            elif layeri == 4: x = torch.cat((harmonic_xyz, x), dim=-1)
+            elif layeri == self.skip_ind: x = torch.cat((xyz, x), dim=-1)
 
             x = layer(x)
 
@@ -311,12 +306,12 @@ class NeuralSurface(torch.nn.Module):
         
 
         sigma = self.layer_sigma(x)
-        feature = self.layer_feature(x)
+        feature = x
 
         if color:
 
             for layeri, layer in enumerate(self.layers_color):
-                if layeri == 0: x = feature
+                if layeri == 0: x = torch.cat((harmonic_xyz, sigma, feature), dim=-1)
                 x = layer(x)
                 if layeri != self.n_color-1: x = self.relu(x)
             color = self.sigmoid(x)
@@ -334,7 +329,8 @@ class NeuralSurface(torch.nn.Module):
         Output:
             distance: N X 3 Tensor, where N is number of input points
         '''
-        pass
+        out = self.get_distance(points, color = True)
+        return out['color']
     
     def get_distance_color(
         self,

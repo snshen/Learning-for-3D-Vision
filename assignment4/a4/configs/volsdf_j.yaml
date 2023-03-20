@@ -28,7 +28,7 @@ training:
   num_epochs: 250
   pretrain_iters: 1000
   batch_size: 1024
-  lr: 0.0005
+  lr: 0.0001
 
   lr_scheduler_step_size: 50
   lr_scheduler_gamma: 0.8
@@ -40,7 +40,7 @@ training:
   render_interval: 10
 
   inter_weight: 0.1
-  eikonal_weight: 0.02
+  eikonal_weight: 0.05
   bounds: [[-4, -4, -4], [4, 4, 4]]
 
 implicit_function:
@@ -48,10 +48,10 @@ implicit_function:
 
   n_harmonic_functions_xyz: 6
 
-  n_layers_distance: 8
-  n_hidden_neurons_distance: 256
+  n_layers_distance: 6
+  n_hidden_neurons_distance: 128
   append_distance: []
 
-  n_layers_color: 3
+  n_layers_color: 2
   n_hidden_neurons_color: 128
   append_color: []
