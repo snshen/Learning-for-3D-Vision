@@ -28,29 +28,40 @@ The MLP I used was based on the NeRF model and had the following architecture
 
 <img src="./images/SDF_MLP.png"  width="50%">
 
-The input vectors are shown in green, intermediate hidden layers are shown in blue, output vectors are shown in orange, and the number inside each block signifies the vector’s dimension. All layers are standard fully-connected layers, black arrows indicate layers with ReLU activations, orange arrows indicate layers with no activation, and “+” denotes vector concatenation. The positional encoding of the input location (γ(x)) is passed through 6 fully-connected ReLU layers, each with 128 channels. We follow the DeepSDF architecture and include a skip connection that concatenates this input to the fifth layer’s activation. 
+The input vectors are shown in green, intermediate hidden layers are shown in blue, output vectors are shown in orange, and the number inside each block signifies the vector’s dimension. All layers are standard fully-connected layers, black arrows indicate layers with ReLU activations, orange arrows indicate layers with no activation, and “+” denotes vector concatenation. The positional encoding of the input location (γ(x)) is passed through 6 fully-connected ReLU layers, each with 128 channels. I also followed the DeepSDF architecture and include a skip connection that concatenates this input to the fifth layer’s activation. 
 
 ##  3. VolSDF (20 pts)
 
-
-In this part, you will implement a function converting SDF -> volume density and extend the `NeuralSurface` class to predict color. 
-
 * **Color Prediction**: Extend the the `NeuralSurface` class to predict per-point color. You may need to define a new MLP (a just a few new layers depending on how you implemented Q2). You should then implement the `get_color` and `get_distance_color` functions.
 
-* **SDF to Density**: Read section 3.1 of the [VolSDF Paper](https://arxiv.org/pdf/2106.12052.pdf) and implement their formula converting signed distance to density in the `sdf_to_density` function in `a4/renderer.py`. In your write-up, give an intuitive explanation of what the parameters `alpha` and `beta` are doing here. Also, answer the following questions:
+Using section 3.1 of the [VolSDF Paper](https://arxiv.org/pdf/2106.12052.pdf), we implement their for formula converting signed distance to density which is 
+
+<p align="center">
+  <img src="images/eq1.png" width=15%/>
+</p>
+<p align="center">
+  <img src="images/eq2.png" width=25%/>
+</p>
+
+In this equation, α and β are defined as learnable parameters, however in our implementation we will be setting these values. β defines the standard deviation of the 0 mean Cumulative Distribution Function (CDF, denotes as Ψ_β) which is used to describe a homogeneous object along with with a constant density scaling factor α. Looking at the equation, we can intuitively think of higher α as higher overall density and higher β as greater smoothness in the output. Given this understanding we can draw the following conclusions:
+
 1. How does high `beta` bias your learned SDF? What about low `beta`?
+
+A higher β causes the the SDF surface to be extremely smooth while a lower β to have sharp boundaries.
+
 2. Would an SDF be easier to train with volume rendering and low `beta` or high `beta`? Why?
+
+A SDF may be more easily trained with a higher value of β since the predicte surface distribution is spread out across a larger area, giving the for the output a higher chance of being close to or overlap with the ground truth and therefore allowing the model to more smoothly convergence while. The wide distribution also ensures that the model will be less likely to overfit to any given sample. On the other hand, a lower value of β could cause the gradients of the model to be unstable during training as the gradients could be extremely large and distincly different for each sample causing the training loss to blow up.
+
 3. Would you be more likely to learn an accurate surface with high `beta` or low `beta`? Why?
 
-After implementing these, train an SDF on the lego bulldozer model with
+A SDF may be more accurate with a lower value of β since the predicte surface distribution is tight and thus able to better represent sharp edges and fine details.  While a higher value of β may converge more smoothly, as mentioned in the previouse point, the larger distribution means that even if the distribution is centered around the ground truth, the higher standard deviation in the model will cause it tp be less accurate.
 
-```bash
-python -m a4.main --config-name=volsdf
-```
-
-This will save `part_3_geometry.gif` and `part_3.gif`. Experiment with hyper-parameters to and attach your best results on your webpage. Comment on the settings you chose, and why they seem to work well.
+My resulting `part_3_geometry.gif` and `part_3.gif`. 
 
 ![Bulldozer geometry](images/part_3_geometry.gif) ![Bulldozer color](images/part_3.gif)
+
+Experiment with hyper-parameters to and attach your best results on your webpage. Comment on the settings you chose, and why they seem to work well.
 
 ## 4. Phong Relighting (20 pts)
 

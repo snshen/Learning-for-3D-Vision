@@ -72,7 +72,7 @@ def sample_images_at_xy(
     batch_size = images.shape[0]
     spatial_size = images.shape[1:-1]
 
-    xy_grid = -xy_grid.view(batch_size, -1, 1, 2)
+    xy_grid = -xy_grid.view(batch_size, -1, 1, 2).to(images.device)
 
     images_sampled = torch.nn.functional.grid_sample(
         images.permute(0, 3, 1, 2),

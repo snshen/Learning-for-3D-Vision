@@ -358,6 +358,7 @@ def train_images(
 
             # Color loss
             loss = torch.mean(torch.square(rgb_gt - out['color']))
+            print("color loss:", loss)
             image_loss = loss
 
             # Sample random points in bounding box
