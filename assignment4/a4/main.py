@@ -110,7 +110,7 @@ def render_images(
             origin = torch.tensor([0.0, 0.0, 0.0], device=device) 
             light_location = None if lights is None else lights[cam_idx].location.to(device)
             if lights is not None:
-                light_dir = None #TODO: Use light location and origin to compute light direction
+                light_dir = light_location - origin#TODO: Use light location and origin to compute light direction
                 light_dir = torch.nn.functional.normalize(light_dir, dim=-1).view(-1, 3)
             xy_grid = get_pixels_from_image(image_size, camera)
             ray_bundle = get_rays_from_pixels(xy_grid, image_size, camera)
@@ -309,6 +309,7 @@ def pretrain_sdf(
         # Take the training step
         optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
         optimizer.step()
 
 
@@ -356,7 +357,8 @@ def train_images(
     # Run the main training loop.
     for epoch in range(start_epoch, cfg.training.num_epochs):
         t_range = tqdm.tqdm(enumerate(train_dataloader))
-
+        avg_image_loss = 0
+        num_image = 0
         for iteration, batch in t_range:
             image, camera, camera_idx = batch[0].values()
             image = image.cuda().unsqueeze(0)
@@ -365,7 +367,7 @@ def train_images(
             # Sample rays
             xy_grid = get_random_pixels_from_image(
                 cfg.training.batch_size, cfg.data.image_size, camera
-            )
+            ).to(image.device)
             ray_bundle = get_rays_from_pixels(
                 xy_grid, cfg.data.image_size, camera
             )
@@ -377,6 +379,8 @@ def train_images(
             # Color loss
             loss = torch.mean(torch.square(rgb_gt - out['color']))
             image_loss = torch.clone(loss)
+            avg_image_loss += loss
+            num_image += 1
 
             # Sample random points in bounding box
             eikonal_points = get_random_points(
@@ -393,7 +397,7 @@ def train_images(
             loss.backward()
             optimizer.step()
 
-            t_range.set_description(f'Epoch: {epoch:04d}, Loss: {loss:.06f}, image_Loss: {image_loss:.06f}, eikonal_loss: {(loss-image_loss):.06f}')
+            t_range.set_description(f'Epoch: {epoch:04d}, Avg_Loss: {(avg_image_loss/num_image):.06f}, Loss: {loss:.06f}')
             t_range.refresh()
 
         # Adjust the learning rate.

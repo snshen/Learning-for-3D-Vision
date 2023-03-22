@@ -20,7 +20,7 @@ Visualizes of the input point cloud used for training and the NeuralSurface pred
 
 |Input Point Cloud|Model Output|
 |:-:|:-:|
-|![Bunny geometry](images/part_2_input.gif)|![Bunny geometry](images/part_2.gif)|
+|![Bunny geometry](images/part_2_input_fin.gif)|![Bunny geometry](images/part_2_fin.gif)|
 
 Brief descriptions of your MLP and eikonal loss:
 
@@ -28,7 +28,7 @@ The MLP I used was based on the NeRF model and had the following architecture
 
 <img src="./images/SDF_MLP.png"  width="50%">
 
-The input vectors are shown in green, intermediate hidden layers are shown in blue, output vectors are shown in orange, and the number inside each block signifies the vector’s dimension. All layers are standard fully-connected layers, black arrows indicate layers with ReLU activations, orange arrows indicate layers with no activation, and “+” denotes vector concatenation. The positional encoding of the input location (γ(x)) is passed through 6 fully-connected ReLU layers, each with 128 channels. I also took inspiration from the DeepSDF architecture and include a skip connection that concatenates this input to the to the activation of the middle layer. Note that the number of harmonics in the embedding, layer dimensions, and number of layers can all be modified by the config file.
+The input vectors are shown in green, intermediate hidden layers are shown in blue, output vectors are shown in orange, and the number inside each block signifies the vector’s dimension. All layers are standard fully-connected layers, black arrows indicate layers with ReLU activations, orange arrows indicate layers with sigmoid activation, and “+” denotes vector concatenation. The positional encoding of the input location (γ(x)) is passed through 6 fully-connected ReLU layers, each with 128 channels. I also took inspiration from the DeepSDF architecture and include a skip connection that concatenates this input to the to the activation of the middle layer. Note that the number of harmonics in the embedding, layer dimensions, and number of layers can all be modified by the config file.
 
 For my eikonal loss, I used the absolute value of the difference between the L2 norm of the gradient and 1 (which is the taget value for the norm). For a batch input, the equation is defined as loss = mean(abs(norm(gradients-1)))
 
@@ -59,11 +59,26 @@ A SDF may be more easily trained with a higher value of β since the predicte su
 
 A SDF may be more accurate with a lower value of β since the predicte surface distribution is tight and thus able to better represent sharp edges and fine details.  While a higher value of β may converge more smoothly, as mentioned in the previouse point, the larger distribution means that even if the distribution is centered around the ground truth, the higher standard deviation in the model will cause it tp be less accurate.
 
-My resulting `part_3_geometry.gif` and `part_3.gif`. 
+My best results were acheived with the default configurations and are as follows: 
 
-![Bulldozer geometry](images/part_3_geometry.gif) ![Bulldozer color](images/part_3.gif)
+![Bulldozer geometry](images/part_3_geometry_05.gif) ![Bulldozer color](images/part_3_05.gif)
 
-Experiment with hyper-parameters to and attach your best results on your webpage. Comment on the settings you chose, and why they seem to work well.
+
+I had run my model with the default configurations. For reference, the MLP I had the following architecture:
+
+<img src="./images/COLOR_SDF.png"  width="50%">
+
+(Details on how to interprest the visual can be found in section 2.)
+
+Then, I experimented some of my parameters, An example of how I tuned my parameters is visualized below where I am varying the parameters of β:
+
+|β Values|Geometry|Full Visualization|
+|:-:|:-:|:-:|
+|0.05|![Bunny geometry](images/part_3_geometry_05.gif)|![Bunny geometry](images/part_3_05.gif)|
+|0.1|![Bunny geometry](images/part_3_geometry_1.gif)|![Bunny geometry](images/part_3_1.gif)|
+|0.5|![Bunny geometry](images/part_3_geometry_5.gif)|![Bunny geometry](images/part_3_5.gif)|
+
+As seen, the larger the β value, the blurrier the final imaage. Interestingly, with a larger β, some random color artifacts also appeared. Note that with my architecture, β of less than 0.05 would begin training reasonably but the loss would randomly explode causing the model to start diverging, even with gradient clipping in place. I theorized that a lower β may require a lower and/or faster decaying lr.
 
 ## 4. Phong Relighting (20 pts)
 

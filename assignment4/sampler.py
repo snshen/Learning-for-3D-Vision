@@ -23,14 +23,24 @@ class StratifiedRaysampler(torch.nn.Module):
         ray_bundle,
     ):  
         
-        # TODO (1.4): Compute z values for self.n_pts_per_ray points uniformly sampled between [near, far]
-        z_range = torch.arange(start=self.min_depth, end=self.max_depth, step=(self.max_depth-self.min_depth)/self.n_pts_per_ray).to(ray_bundle.directions.device)
+        # # TODO (1.4): Compute z values for self.n_pts_per_ray points uniformly sampled between [near, far]
+        # z_range = torch.arange(start=self.min_depth, end=self.max_depth, step=(self.max_depth-self.min_depth)/self.n_pts_per_ray).to(ray_bundle.directions.device)
 
+        # # TODO (1.4): Sample points from z values
+        # # Return
+        # return ray_bundle._replace(
+        #     sample_points=ray_bundle.origins.unsqueeze(1) + torch.einsum('mi,n->mni', ray_bundle.directions, z_range),
+        #     sample_lengths=torch.tile(z_range,(ray_bundle.directions.shape[0],1)).unsqueeze(2) ,
+        # )
+        z_range = torch.linspace(self.min_depth, self.max_depth, self.n_pts_per_ray).to(ray_bundle.directions.device)
         # TODO (1.4): Sample points from z values
+        sample_lengths = z_range.view(1,-1,1).expand(ray_bundle.directions.shape[0],-1,-1)
+        sample_points = ray_bundle.origins.unsqueeze(1) + ray_bundle.directions.unsqueeze(1)*sample_lengths.expand(-1,-1,3)
+
         # Return
         return ray_bundle._replace(
-            sample_points=ray_bundle.origins.unsqueeze(1) + torch.einsum('mi,n->mni', ray_bundle.directions, z_range),
-            sample_lengths=torch.tile(z_range,(ray_bundle.directions.shape[0],1)).unsqueeze(2) ,
+            sample_points=sample_points,
+            sample_lengths=sample_lengths.reshape(-1,1),
         )
 
 
