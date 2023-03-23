@@ -1,6 +1,6 @@
 # Assignment 4: Neural Surfaces
 Number of late days used:
-<img src="./images/zero.png"  width="3%">
+<img src="./images/one.png"  width="5%">
 
 ##  1. Sphere Tracing (30pts)
 
@@ -110,9 +110,11 @@ A primitive bunny!
 
 | Views |VolSDF solution|NeRF solution|
 |:-:|:-:|:-:|
-|10|![](images/part_3.gif)|![](images/part_3_n.gif)|
+|5|![](images/part_3_s_5.gif)|![](images/part_3_n_5.gif)|
+|10|![](images/part_3_s_10.gif)|![](images/part_3_n_10.gif)|
+|15|![](images/part_3_s_15.gif)|![](images/part_3_n_15.gif)|
 
-
+As seen, while nerf generally get a more accurate representation of the object. At extremely low number of views, VolSDF is able to somewhat visualize the object while NeRF entirely fails to do so.
 ### 5.3 Alternate SDF to Density Conversions (10 pts)
 For this section, I implemented the ‘naive’ solution from the [NeuS paper](https://arxiv.org/pdf/2106.10689.pdf) which can be described as 
 
