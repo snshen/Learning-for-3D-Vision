@@ -1,6 +1,6 @@
 seed: 1
 
-type: train_images
+type: train_images_naive
 
 data:
   image_size: [128, 128]
@@ -12,8 +12,8 @@ renderer:
   white_background: False
 
   alpha: 10.0
-  beta: 0.25 #0.05
-  s:
+  beta: 0.05 #0.05
+  s: 40
 
   relighting_function:
     type: none
@@ -34,7 +34,7 @@ training:
   lr_scheduler_step_size: 50
   lr_scheduler_gamma: 0.8
 
-  checkpoint_path: ./volsdf_checkpoint
+  checkpoint_path: ./volsdf_naive_checkpoint
   checkpoint_interval: 50
   resume: False
 

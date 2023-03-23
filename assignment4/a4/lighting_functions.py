@@ -23,7 +23,13 @@ def phong(
     # Assume the ambient light (i_a) is of unit intensity 
     # While the general Phong model allows rerendering with multiple lights, 
     # here we only implement a single directional light source of unit intensity
-    pass
+    ka, kd, ks, n = params['ka'], params['kd'], params['ks'], params['n']
+    R = 2 * torch.sum(normals * light_dir, dim=1, keepdim=True) * normals-light_dir
+    diffuse = kd * torch.clamp(torch.sum(normals * light_dir, dim=1, keepdim=True),0,1)
+    specular = ks * torch.pow(torch.clamp(torch.sum(R * view_dirs, dim=1, keepdim=True),0,1),n)
+    illumination = (ka+diffuse+specular)*colors
+
+    return illumination
 
 relighting_dict = {
     'phong': phong

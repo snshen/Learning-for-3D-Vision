@@ -98,15 +98,20 @@ class SphereTracingRenderer(torch.nn.Module):
         return out
 
 
-def sdf_to_density(signed_distance, alpha, beta):
+def sdf_to_density(signed_distance, alpha, beta, s = None):
     # TODO (Q3): Convert signed distance to density with alpha, beta parameters
+
+    if s is not None:
+        return s * torch.exp(-s * signed_distance) / ((1 + torch.exp(-s * signed_distance))**2) 
+    
     s = -signed_distance
     return torch.where(s <= 0, alpha * (0.5 * torch.exp(s/beta)), alpha * (1 - 0.5 * torch.exp(-s/beta)))
 
 class VolumeSDFRenderer(torch.nn.Module):
     def __init__(
         self,
-        cfg
+        cfg,
+        naive = False
     ):
         super().__init__()
 
@@ -116,6 +121,7 @@ class VolumeSDFRenderer(torch.nn.Module):
         self.beta = cfg.beta
 
         self.cfg = cfg
+        self.naive = naive
 
     def _compute_weights(
         self,
@@ -167,7 +173,10 @@ class VolumeSDFRenderer(torch.nn.Module):
 
             # Call implicit function with sample points
             distance, color = implicit_fn.get_distance_color(cur_ray_bundle.sample_points)
-            density = sdf_to_density(distance, self.cfg.alpha, self.cfg.beta) # TODO (Q3): convert SDF to density
+            if self.naive:
+                density = sdf_to_density(distance, self.cfg.alpha, self.cfg.beta, s=self.cfg.s)
+            else:
+                density = sdf_to_density(distance, self.cfg.alpha, self.cfg.beta) # TODO (Q3): convert SDF to density
 
             # Compute length of each ray segment
             depth_values = cur_ray_bundle.sample_lengths[..., 0]

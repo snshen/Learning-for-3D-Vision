@@ -11,15 +11,26 @@ from a4.lighting_functions import relighting_dict
 class SphereSDF(torch.nn.Module):
     def __init__(
         self,
-        cfg
+        cfg = None,
+        center=[0,0,0], 
+        radius=[1.0],
+        c_opt = True,
+        r_opt = False
+
     ):
         super().__init__()
 
+        if cfg != None:
+            center = cfg.center.val
+            radius = cfg.radius.val
+            c_opt = True
+            r_opt = False
+
         self.center = torch.nn.Parameter(
-            torch.tensor(cfg.center.val).float().unsqueeze(0), requires_grad=cfg.center.opt
+            torch.tensor(center).float().unsqueeze(0), requires_grad=c_opt
         )
         self.radius = torch.nn.Parameter(
-            torch.tensor(cfg.radius.val).float(), requires_grad=cfg.radius.opt
+            torch.tensor(radius).float(), requires_grad=r_opt
         )
 
     def forward(self, points):
@@ -92,9 +103,7 @@ sdf_dict = {
     'box': BoxSDF,
     'torus': TorusSDF,
 }
-
-
-# Converts SDF into density/feature volume
+    
 class SDFSurface(torch.nn.Module):
     def __init__(
         self,
@@ -132,97 +141,96 @@ class SDFSurface(torch.nn.Module):
     def forward(self, points):
         return self.get_distance(points)
 
-
-
-class HarmonicEmbedding(torch.nn.Module):
+  
+class LargeSDFSurface(torch.nn.Module):
     def __init__(
         self,
-        in_channels: int = 3,
-        n_harmonic_functions: int = 6,
-        omega0: float = 1.0,
-        logspace: bool = True,
-        include_input: bool = True,
-    ) -> None:
-        super().__init__()
-
-        if logspace:
-            frequencies = 2.0 ** torch.arange(
-                n_harmonic_functions,
-                dtype=torch.float32,
-            )
-        else:
-            frequencies = torch.linspace(
-                1.0,
-                2.0 ** (n_harmonic_functions - 1),
-                n_harmonic_functions,
-                dtype=torch.float32,
-            )
-
-        self.register_buffer("_frequencies", omega0 * frequencies, persistent=False)
-        self.include_input = include_input
-        self.output_dim = n_harmonic_functions * 2 * in_channels
-
-        if self.include_input:
-            self.output_dim += in_channels
-
-    def forward(self, x: torch.Tensor):
-        embed = (x[..., None] * self._frequencies).view(*x.shape[:-1], -1)
-
-        if self.include_input:
-            return torch.cat((embed.sin(), embed.cos(), x), dim=-1)
-        else:
-            return torch.cat((embed.sin(), embed.cos()), dim=-1)
-
-
-class LinearWithRepeat(torch.nn.Linear):
-    def forward(self, input):
-        n1 = input[0].shape[-1]
-        output1 = F.linear(input[0], self.weight[:, :n1], self.bias)
-        output2 = F.linear(input[1], self.weight[:, n1:], None)
-        return output1 + output2.unsqueeze(-2)
-
-
-class MLPWithInputSkips(torch.nn.Module):
-    def __init__(
-        self,
-        n_layers: int,
-        input_dim: int,
-        output_dim: int,
-        skip_dim: int,
-        hidden_dim: int,
-        input_skips,
+        cfg
     ):
         super().__init__()
 
-        layers = []
+        self.sdf = sdf_dict[cfg.sdf.type](
+            cfg.sdf
+        )
 
-        for layeri in range(n_layers):
-            if layeri == 0:
-                dimin = input_dim
-                dimout = hidden_dim
-            elif layeri in input_skips:
-                dimin = hidden_dim + skip_dim
-                dimout = hidden_dim
-            else:
-                dimin = hidden_dim
-                dimout = hidden_dim
+        #########
+        self.sdfs=[]
+        #tail
+        self.sdfs.append(SphereSDF(center=torch.tensor([1.3,-0.15,-0.05]).to('cuda:0'), radius=torch.tensor(0.25).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([1.27,-0.15,-0.15]).to('cuda:0'), radius=torch.tensor(0.35).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([1.25,-0.15,-0.19]).to('cuda:0'), radius=torch.tensor(0.35).to('cuda:0')))
+        #thigh
+        self.sdfs.append(SphereSDF(center=torch.tensor([0.4,-0.45,0]).to('cuda:0'), radius=torch.tensor(0.7).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([0.43,-0.3,-0.1]).to('cuda:0'), radius=torch.tensor(0.7).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([0.44,-0.15,-0.2]).to('cuda:0'), radius=torch.tensor(0.7).to('cuda:0')))
+        #back leg
+        self.sdfs.append(SphereSDF(center=torch.tensor([0.12,-0.8,-0.32]).to('cuda:0'), radius=torch.tensor(0.35).to('cuda:0')))
+        #haunches
+        self.sdfs.append(SphereSDF(center=torch.tensor([0.35,0,0]).to('cuda:0'), radius=torch.tensor(1.05).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([0.2,0,0]).to('cuda:0'), radius=torch.tensor(1.0).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([0.18,0,0]).to('cuda:0'), radius=torch.tensor(0.98).to('cuda:0')))
+        #front legs
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.55,-0.7,-0.38]).to('cuda:0'), radius=torch.tensor(0.22).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.6,-0.7,-0.42]).to('cuda:0'), radius=torch.tensor(0.18).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.65,-0.25,-0.5]).to('cuda:0'), radius=torch.tensor(0.25).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.75,-0.25,-0.53]).to('cuda:0'), radius=torch.tensor(0.2).to('cuda:0')))
+        #chest
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.38,-0.05,0.28]).to('cuda:0'), radius=torch.tensor(0.8).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.53,-0.1,0.32]).to('cuda:0'), radius=torch.tensor(0.78).to('cuda:0')))
+        #head
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.65,-0.15,1.05]).to('cuda:0'), radius=torch.tensor(0.58).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.65,-0.25,1.05]).to('cuda:0'), radius=torch.tensor(0.55).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.65,-0.48,1.0]).to('cuda:0'), radius=torch.tensor(0.43).to('cuda:0')))
+        #ears
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.55,0.02,1.5]).to('cuda:0'), radius=torch.tensor(0.18).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.50,0.14,1.56]).to('cuda:0'), radius=torch.tensor(0.21).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.45,0.26,1.62]).to('cuda:0'), radius=torch.tensor(0.21).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.40,0.38,1.68]).to('cuda:0'), radius=torch.tensor(0.20).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.35,0.50,1.74]).to('cuda:0'), radius=torch.tensor(0.18).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.30,0.62,1.80]).to('cuda:0'), radius=torch.tensor(0.15).to('cuda:0')))
 
-            linear = torch.nn.Linear(dimin, dimout)
-            layers.append(torch.nn.Sequential(linear, torch.nn.ReLU(True)))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-0.93,0.01,1.45]).to('cuda:0'), radius=torch.tensor(0.18).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-1.03,0.11,1.50]).to('cuda:0'), radius=torch.tensor(0.21).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-1.13,0.21,1.55]).to('cuda:0'), radius=torch.tensor(0.21).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-1.23,0.31,1.60]).to('cuda:0'), radius=torch.tensor(0.20).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-1.33,0.41,1.65]).to('cuda:0'), radius=torch.tensor(0.18).to('cuda:0')))
+        self.sdfs.append(SphereSDF(center=torch.tensor([-1.43,0.51,1.70]).to('cuda:0'), radius=torch.tensor(0.15).to('cuda:0')))
 
-        self.mlp = torch.nn.ModuleList(layers)
-        self._input_skips = set(input_skips)
 
-    def forward(self, x: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
-        y = x
+        # self.sdfs.append(SphereSDF(center=torch.tensor([0.8,0,0.5]).to('cuda:0'), radius=torch.tensor(0.7).to('cuda:0')))
 
-        for li, layer in enumerate(self.mlp):
-            if li in self._input_skips:
-                y = torch.cat((y, z), dim=-1)
+        #########
+        self.rainbow = cfg.feature.rainbow if 'rainbow' in cfg.feature else False
+        self.feature = torch.nn.Parameter(
+            torch.ones_like(torch.tensor(cfg.feature.val).float().unsqueeze(0)), requires_grad=cfg.feature.opt
+        )
+    
+    def get_distance(self, points):
+        points = points.view(-1, 3)
+        dists = []
+        for sdf in self.sdfs:
+            dists.append(sdf(points))
+        dists = torch.cat(dists, dim=1)
+        dist,_ = torch.min(dists,dim=1,keepdim=True)
+        return dist
 
-            y = layer(y)
+    def get_color(self, points):
+        points = points.view(-1, 3)
 
-        return y
+        # Outputs
+        if self.rainbow:
+            base_color = torch.clamp(
+                torch.abs(points - self.sdf.center),
+                0.02,
+                0.98
+            )
+        else:
+            base_color = 1.0
+
+        return base_color * self.feature * points.new_ones(points.shape[0], 1)
+    
+    def forward(self, points):
+        return self.get_distance(points)
 
 
 class HarmonicEmbedding(torch.nn.Module):
@@ -346,7 +354,7 @@ class NeuralSurface(torch.nn.Module):
         self.rgb = torch.nn.ModuleList()
         for layeri in range(self.n_color):
             if layeri == 0: 
-                self.rgb.append(torch.nn.Linear(self.embedding_dim_xyz+hidden_dims[0], hidden_dims[1]))
+                self.rgb.append(torch.nn.Linear(3+hidden_dims[0], hidden_dims[1]))
             else: 
                 self.rgb.append(torch.nn.Linear(hidden_dims[1], hidden_dims[1]))
             self.rgb.append(torch.nn.ReLU())
@@ -383,6 +391,7 @@ class NeuralSurface(torch.nn.Module):
             distance: N X 3 Tensor, where N is number of input points
         '''
         x = points.view(-1, 3)
+        xyz = points.view(-1, 3)
         harmonic_xyz = self.harmonic_embedding_xyz(x)
 
         for layeri, layer in enumerate(self.layers_dist):
@@ -391,7 +400,7 @@ class NeuralSurface(torch.nn.Module):
             x = layer(x)
             x = self.relu(x)
 
-        x = torch.cat((x, harmonic_xyz), dim=-1)
+        x = torch.cat((x, xyz), dim=-1)
         for layeri, layer in enumerate(self.rgb):
             x = layer(x)
 
@@ -409,6 +418,7 @@ class NeuralSurface(torch.nn.Module):
             but, depending on your MLP implementation, it maybe more efficient to share some computation
         '''
         x = points.view(-1, 3)
+        xyz = points.view(-1, 3)
         harmonic_xyz = self.harmonic_embedding_xyz(x)
         
         for layeri, layer in enumerate(self.layers_dist):
@@ -418,7 +428,7 @@ class NeuralSurface(torch.nn.Module):
             x = self.relu(x)
         distance =  self.layer_sigma(x)
         
-        x = torch.cat((x, harmonic_xyz), dim=-1)
+        x = torch.cat((x, xyz), dim=-1)
         for layeri, layer in enumerate(self.rgb):
             x = layer(x)
         points = x
@@ -468,5 +478,6 @@ class NeuralSurface(torch.nn.Module):
 
 implicit_dict = {
     'sdf_surface': SDFSurface,
+    'large_sdf_surface': LargeSDFSurface,
     'neural_surface': NeuralSurface,
 }

@@ -49,7 +49,8 @@ from render_functions import render_points
 class Model(torch.nn.Module):
     def __init__(
         self,
-        cfg
+        cfg,
+        naive = False
     ):
         super().__init__()
 
@@ -64,10 +65,16 @@ class Model(torch.nn.Module):
         )
 
         # Initialize implicit renderer
-        self.renderer = renderer_dict[cfg.renderer.type](
-            cfg.renderer
+        if naive:
+            self.renderer = renderer_dict[cfg.renderer.type](
+            cfg.renderer,
+            naive = True
         )
-    
+        else:
+            self.renderer = renderer_dict[cfg.renderer.type](
+                cfg.renderer
+            )
+        
     def forward(
         self,
         ray_bundle,
@@ -138,6 +145,7 @@ def render_images(
 
 def render(
     cfg,
+    large = False
 ):
     # Create model
     model = Model(cfg)
@@ -148,12 +156,18 @@ def render(
     all_images = render_images(
         model, cameras, cfg.data.image_size
     )
-    imageio.mimsave('images/part_1.gif', [np.uint8(im * 255) for im in all_images])
+    if large:
+        imageio.mimsave('images/part_5_1.gif', [np.uint8(im * 255) for im in all_images])
+    else:
+        imageio.mimsave('images/part_1.gif', [np.uint8(im * 255) for im in all_images])
 
 
-def create_model(cfg):
+def create_model(cfg, naive = False):
     # Create model
-    model = Model(cfg)
+    if naive:
+        model = Model(cfg, naive=naive)
+    else:
+        model = Model(cfg)
     model.cuda(); model.train()
 
     # Load checkpoints
@@ -314,10 +328,11 @@ def pretrain_sdf(
 
 
 def train_images(
-    cfg
+    cfg,
+    naive = False
 ):
     # Create model
-    model, optimizer, lr_scheduler, start_epoch, checkpoint_path = create_model(cfg)
+    model, optimizer, lr_scheduler, start_epoch, checkpoint_path = create_model(cfg, naive = naive)
 
     # Load the training/validation data.
     train_dataset, val_dataset, _ = get_nerf_datasets(
@@ -335,24 +350,6 @@ def train_images(
 
     # Pretrain SDF
     pretrain_sdf(cfg, model)
-
-    #######
-    test_images = render_images(
-        model, create_surround_cameras(4.0, n_poses=20, up=(0.0, 0.0, 1.0), focal_length=2.0),
-        cfg.data.image_size, file_prefix='volsdf'
-    )
-    imageio.mimsave('images/part_3.gif', [np.uint8(im * 255) for im in test_images])
-
-    try:
-        test_images = render_geometry(
-            model, create_surround_cameras(4.0, n_poses=20, up=(0.0, 0.0, 1.0), focal_length=2.0),
-            cfg.data.image_size, file_prefix='volsdf_geometry'
-        )
-        imageio.mimsave('images/part_3_geometry.gif', [np.uint8(im * 255) for im in test_images])
-    except Exception as e:
-        print("Empty mesh")
-        pass
-    #######
 
     # Run the main training loop.
     for epoch in range(start_epoch, cfg.training.num_epochs):
@@ -420,6 +417,10 @@ def train_images(
             torch.save(data_to_store, checkpoint_path)
 
         # Render
+        if naive:
+            path = 'images/part_5_3'
+        else:
+            path = 'images/part_3'
         if (
             epoch % cfg.training.render_interval == 0
             and epoch > 0
@@ -428,14 +429,14 @@ def train_images(
                 model, create_surround_cameras(4.0, n_poses=20, up=(0.0, 0.0, 1.0), focal_length=2.0),
                 cfg.data.image_size, file_prefix='volsdf'
             )
-            imageio.mimsave('images/part_3.gif', [np.uint8(im * 255) for im in test_images])
+            imageio.mimsave(path+'.gif', [np.uint8(im * 255) for im in test_images])
 
             try:
                 test_images = render_geometry(
                     model, create_surround_cameras(4.0, n_poses=20, up=(0.0, 0.0, 1.0), focal_length=2.0),
                     cfg.data.image_size, file_prefix='volsdf_geometry'
                 )
-                imageio.mimsave('images/part_3_geometry.gif', [np.uint8(im * 255) for im in test_images])
+                imageio.mimsave(path+'_geometry.gif', [np.uint8(im * 255) for im in test_images])
             except Exception as e:
                 print("Empty mesh")
                 pass
@@ -478,10 +479,14 @@ def main(cfg: DictConfig):
 
     if cfg.type == 'render':
         render(cfg)
+    if cfg.type == 'large_render':
+        render(cfg, large = True)
     elif cfg.type == 'train_points':
         train_points(cfg)
     elif cfg.type == 'train_images':
         train_images(cfg)
+    elif cfg.type == 'train_images_naive':
+        train_images(cfg, naive = True)
     elif cfg.type == 'relight_images':
         relight_images(cfg)
 

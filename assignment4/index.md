@@ -76,19 +76,13 @@ Then, I experimented some of my parameters, An example of how I tuned my paramet
 |:-:|:-:|:-:|
 |0.05|![Bunny geometry](images/part_3_geometry_05.gif)|![Bunny geometry](images/part_3_05.gif)|
 |0.1|![Bunny geometry](images/part_3_geometry_1.gif)|![Bunny geometry](images/part_3_1.gif)|
+|0.25|![Bunny geometry](images/part_3_geometry_25.gif)|![Bunny geometry](images/part_3_25.gif)|
 |0.5|![Bunny geometry](images/part_3_geometry_5.gif)|![Bunny geometry](images/part_3_5.gif)|
 
-As seen, the larger the β value, the blurrier the final imaage. Interestingly, with a larger β, some random color artifacts also appeared. Note that with my architecture, β of less than 0.05 would begin training reasonably but the loss would randomly explode causing the model to start diverging, even with gradient clipping in place. I theorized that a lower β may require a lower and/or faster decaying lr.
+As seen, the larger the β value, the blurrier the final imaage. Additionally, with a larger β, some random color artifacts also appeared. Also to note, with my architecture, β of less than 0.05 would begin training reasonably but the loss would randomly explode causing the model to start diverging, even with gradient clipping in place. I theorized that a lower β may require a lower and/or faster decaying lr.
 
 ## 4. Phong Relighting (20 pts)
 
-In this part, you'll be implementing the [Phong reflection model](https://en.wikipedia.org/wiki/Phong_reflection_model) in order to render the SDF volume you trained under different lighting conditions. In principle, the Phong model can handle multiple different light sources coming from different directions, but for our implementation we assume we're working with a single directional light source that is coming in from `light_dir` and is of unit intensity. We will feed in a dictionary of Phong parameters containing `ks, kd, ka, n`, which refer to the specular, diffuse, ambient, and shininess constants respectively. The specular, diffuse, and ambient components describe the ratio of reflection to the specular, diffuse, or ambient components of light. The shininess constant describes how smooth the surface is, with higher values making it smoother and thus shinier.
-
-* **Surface Normal Recovery**: To relight our model, we only need to evaluate the surface normal of our volume to plug into our reflection model. This can be done by dividing the gradient by its norm and can be implemented in the `get_surface_normal` function.
-
-* **Reflection Model**: Using the surface normals, implement the Phong reflection model in `lighting_functions.py`. To get the light direction, calculate the value in `render_images` in `main.py`.
-
-Now, render the volume under different lighting using:
 
 ```bash
 python -m a4.main --config-name=phong
@@ -96,13 +90,42 @@ python -m a4.main --config-name=phong
 
 This will save `part_4_geometry.gif` and `part_4.gif` in the `images` folder, showing your model under rotating lights.
 
-![Bulldozer relight geometry](images/part_4_geometry.gif) ![Bulldozer relight color](images/part_4.gif)
+
+Visualizes of the bulldozer under rotating lights  point cloud used for training and the NeuralSurface prediction. 
+
+|Relight Geometry|Relight Visualization|
+|:-:|:-:|
+|![Bulldozer relight geometry](images/part_4_geometry.gif)|![Bulldozer relight color](images/part_4.gif)|
 
 ## 5. Neural Surface Extras (CHOOSE ONE! More than one is extra credit)
 
 ### 5.1. Render a Large Scene with Sphere Tracing (10 pts)
-In Q1, you rendered a (lonely) Torus, but to the power of Sphere Tracing lies in the fact that it can render complex scenes efficiently. To observe this, try defining a ‘scene’ with many (> 20) primitives (e.g. Sphere, Torus, or another SDF from [this website](https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm) at different locations). See Lecture 2 for equations of what the ‘composed’ SDF of primitives is. You can then define a new class in `implicit.py` that instantiates a complex scene with many primitives, and modify the code for Q1 to render this scene instead of a simple torus.
+In this section, I define a custom ‘scene’ with 31 primitive circles to create...
+
+![](images/part_5_1.gif)
+
+A primitive bunny!
 ### 5.2 Fewer Training Views (10 pts)
-In Q3, we relied on 100 training views for a single scene. A benefit of using Surface representations, however, is that the geometry is better regularized and can in principle be inferred from fewer views. Experiment with using fewer training views (say 20) -- you can do this by changing [train_idx in data laoder](https://github.com/learning3d/assignment3/blob/main/dataset.py#L123) to use a smaller random subset of indices). You should also compare the VolSDF solution to a NeRF solution learned using similar views.
+ Here is a comparison of the VolSDF solution to a NeRF solution learned different 20 views:
+
+| |VolSDF solution|VolSDF solution|
+|:-:|:-:|:-:|
+|geometry|![](images/part_3.gif)|![](images/part_5_1.gif)|
+|visualization|![](images/part_3.gif)|![](images/part_5_1.gif)|
+
+
 ### 5.3 Alternate SDF to Density Conversions (10 pts)
-In Q3, we used the equations from [VolSDF Paper](https://arxiv.org/pdf/2106.12052.pdf) to convert SDF to density. You should try and compare alternate ways of doing this e.g. the ‘naive’ solution from the [NeuS paper](https://arxiv.org/pdf/2106.10689.pdf), or any other ways that you might want to propose!
+For this section, I implemented the ‘naive’ solution from the [NeuS paper](https://arxiv.org/pdf/2106.10689.pdf) which can be described as 
+
+<p align="center">
+  <img src="images/eq3.png" width=15%/>
+</p>
+
+where s is a used set parameter. Below I have included various outputs and their associated s values:
+
+|s Values|Geometry|Full Visualization|
+|:-:|:-:|:-:|
+|10|![](images/part_5_3_geometry_10.gif)|![](images/part_5_3_10.gif)|
+|20|![](images/part_5_3_geometry_20.gif)|![](images/part_5_3_20.gif)|
+|30|![](images/part_5_3_geometry_30.gif)|![](images/part_5_3_30.gif)|
+|40|![](images/part_5_3_geometry_40.gif)|![](images/part_5_3_40.gif)|
