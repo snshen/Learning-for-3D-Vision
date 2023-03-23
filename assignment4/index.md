@@ -108,10 +108,9 @@ A primitive bunny!
 ### 5.2 Fewer Training Views (10 pts)
  Here is a comparison of the VolSDF solution to a NeRF solution learned different 20 views:
 
-| |VolSDF solution|VolSDF solution|
+| Views |VolSDF solution|NeRF solution|
 |:-:|:-:|:-:|
-|geometry|![](images/part_3.gif)|![](images/part_5_1.gif)|
-|visualization|![](images/part_3.gif)|![](images/part_5_1.gif)|
+|10|![](images/part_3.gif)|![](images/part_3_n.gif)|
 
 
 ### 5.3 Alternate SDF to Density Conversions (10 pts)

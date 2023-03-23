@@ -55,7 +55,13 @@ python -m a4.main --config-name=large
 This should save `part_1.gif` in the `images' folder. 
 
 ### 5.2 Fewer Training Views (10 pts)
-In Q3, we relied on 100 training views for a single scene. A benefit of using Surface representations, however, is that the geometry is better regularized and can in principle be inferred from fewer views. Experiment with using fewer training views (say 20) -- you can do this by changing [train_idx in data laoder](https://github.com/learning3d/assignment3/blob/main/dataset.py#L123) to use a smaller random subset of indices). You should also compare the VolSDF solution to a NeRF solution learned using similar views.
+To reproduce results, uncomment line 125 in dataset.py and change index to desired number of views then run:
+
+```bash
+python -m a4.main --config-name=volsdf
+```
+
+Be careful as this will overwrite `part_3_geometry.gif` and `part_3.gif`. 
 
 ### 5.3 Alternate SDF to Density Conversions (10 pts)
 
