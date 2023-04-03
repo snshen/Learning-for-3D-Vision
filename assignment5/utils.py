@@ -51,7 +51,6 @@ def get_points_renderer(
     )
     return renderer
 
-
 def viz_seg (verts, labels, path, device):
     """
     visualize segmentation result
@@ -68,13 +67,13 @@ def viz_seg (verts, labels, path, device):
     R, T = pytorch3d.renderer.cameras.look_at_view_transform(dist=dist, elev=elev, azim=azim, device=device)
     c = pytorch3d.renderer.FoVPerspectiveCameras(R=R, T=T, fov=60, device=device)
 
-    sample_verts = verts.unsqueeze(0).repeat(30,1,1).to(torch.float)
-    sample_labels = labels.unsqueeze(0)
-    sample_colors = torch.zeros((1,10000,3))
+    sample_verts = verts.unsqueeze(0).repeat(30,1,1).to(torch.float).to(device)
+    sample_labels = labels.unsqueeze(0).to(device)
+    sample_colors = torch.zeros((1,10000,3)).to(device)
 
     # Colorize points based on segmentation labels
     for i in range(6):
-        sample_colors[sample_labels==i] = torch.tensor(colors[i])
+        sample_colors[sample_labels==i] = torch.tensor(colors[i]).to(device)
 
     sample_colors = sample_colors.repeat(30,1,1).to(torch.float)
 
@@ -85,3 +84,26 @@ def viz_seg (verts, labels, path, device):
 
     imageio.mimsave(path, rend, fps=15)
 
+
+def viz_cloud(
+    src_cloud,
+    src_path = "submissions/source_cloud.gif", 
+    num_views = 30, 
+    radius = 0.02):
+
+    dist = 3
+    elev = 0
+    azim = [180 - 12*i for i in range(num_views)]
+    device = src_cloud.device
+    R, T = pytorch3d.renderer.cameras.look_at_view_transform(dist=dist, elev=elev, azim=azim, device=device)
+    c = pytorch3d.renderer.FoVPerspectiveCameras(R=R, T=T, fov=60, device=device)
+    renderer = get_points_renderer(device=src_cloud.device, radius=radius)
+
+    rgb = (src_cloud - src_cloud.min()) / (src_cloud.max() - src_cloud.min())
+    src_cloud = pytorch3d.structures.Pointclouds(points=src_cloud, features=rgb).to(src_cloud.device)
+
+    my_images = renderer(src_cloud.extend(num_views), cameras=c)
+    my_images = my_images.cpu().detach().numpy()
+    imageio.mimsave(src_path, my_images, fps=15)
+    
+    return

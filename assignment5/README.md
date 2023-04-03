@@ -1,45 +1,34 @@
- ## Overview
-In this assignment, you will implement a PointNet based architecture for classification and segmentation with point clouds (you don't need to worry about the tranformation blocks). Q1 and Q2 focus on implementing, training and testing models. Q3 asks you to quantitatively analyze model robustness. Q4 (extra point) involves locality. 
-
-`models.py` is where you will define model structures. `train.py` loads data, trains models, logs trajectories and saves checkpoints. `eval_cls.py` and `eval_seg.py` contain script to evaluate model accuracy and visualize the task results. Feel free to modify any file as needed.
-
 ## Data Preparation
 Download zip file (~2GB) from https://drive.google.com/file/d/1wXOgwM_rrEYJfelzuuCkRfMmR0J7vLq_/view?usp=sharing. Put the unzipped `data` folder under root directory. There are two folders (`cls` and `seg`) corresponding to two tasks, each of which contains `.npy` files for training and testing.
 
 ## Q1. Classification Model (40 points)
-Implement the classification model in `models.py`.
+Run `python train.py --task cls` to train the model. Note that in my submission, I trained my model for 30 epochs.
 
-- Intput: points clouds from across 3 classes (chairs, vases and lamps)
+Then run `python eval_cls.py` which should automatically print the test accuracy of the best model, generate visualization for a success prediction for each classes (chair, vase and lamp),  generate visualization for a failure prediction for each class, and indicate what indices of the test data was used for visualization.  
 
-- Output: probability distribution indicating predicted classification (Dimension: Batch * Number of Classes)
-
-Complete model initialization and prediction in `train.py` and `eval_cls.py`. Run `python train.py --task cls` to train the model, and `python eva_cls.py` for evaluation. Check out the arguments and feel free to modify them as you want.
-
-Deliverables: On your website, 
-
-- Report the test accuracy of your best model.
-
-- Visualize a few random test point clouds and mention the predicted classes for each. Also, visualize at least 1 failure prediction for each class (chair, vase and lamp), and provide interpretation in a few sentences.  
+Note down the indices printed if you would like to revisualize these specific examples for Q3.
 
 ## Q2. Segmentation Model (40 points) 
-Implement the segmentation model in `models.py`.  
+Run `python train.py --task seg` to train the model. Note that in my submission, I trained my model for 250 epochs and the best model was saved at epoch 160.
+ 
+Then run `python eval_seg.py` which should automatically print the test accuracy of the best model, generate segmentation visualization and metrics for a 3 success predictions, and generate segmentation visualization and metrics for a 3 failure predictions.  
 
-- Input: points of chair objects (6 semantic segmentation classes) 
+Thresholds for definig success (default set above 0.9) and failure (default set below 0.7) can be changes with the `--s_thresh` and `--f_thresh` flag respectively.
 
-- Output: segmentation of points (Dimension: Batch * Number of Points per Object * Number of Segmentation Classes)
+Note down the indices printed if you would like to revisualize these specific examples for Q3.
 
-Complete model initialization and prediction in `train.py` and `eval_seg.py`. Run `python train.py --task seg` to train the model. Running `python eval_seg.py` will save two GIFs, one for ground truth and the other for model prediction. Check out the arguments and feel free to modify them as you want. In particular, you may want to specify `--i` and `--load_checkpoint` arguments in `eval_seg.py` to use your desired model checkpoint on a particular object.
-
-Deliverables: On your website 
-
-- Report the test accuracy of your best model.
-
-- Visualize segmentation results of at least 5 objects (including 2 bad predictions) with corresponding ground truth, report the prediction accuracy for each object, and provide interpretation in a few sentences.
-  
 ## Q3. Robustness Analysis (20 points) 
-Conduct 2 experiments to analyze the robustness of your learned model. Some possible suggestions are:
-1. You can rotate the input point clouds by certain degrees and report how much the accuracy falls
-2. You can input a different number of points points per object (modify `--num_points` when evaluating models in `eval_cls.py` and `eval_seg.py`)
+
+### Experiment 1: Rotation Invariance
+
+run `python3 eval_cls.py --rotate [RADIANS]  --indices [INDICES TO VISUALIZE]` for this section, add `--exp_name [UNIQUE PREFIX]` to add a prefix to the saves gif name.
+
+### Experiment 2: Number of Points 
+
+
+run `python3 eval_cls.py --rotate [RADIANS]  --indices [INDICES TO VISUALIZE]` for this section, add `--exp_name [UNIQUE PREFIX]` to add a prefix to the saves gif name.
+
+Run `python eval_seg.py --num_points 100` for this section, add `--indices` flag to visualize specific examples.
 
 Feel free to try other ways of probing the robustness. Each experiment is worth 10 points.
 
