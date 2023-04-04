@@ -51,11 +51,14 @@ def get_points_renderer(
     )
     return renderer
 
-def viz_seg (verts, labels, path, device):
+def viz_seg (verts, labels, path, args):
     """
     visualize segmentation result
     output: a 360-degree gif
     """
+    device = args.device
+    k = args.num_points
+
     image_size=256
     background_color=(1, 1, 1)
     colors = [[1.0,1.0,1.0], [1.0,0.0,1.0], [0.0,1.0,1.0],[1.0,1.0,0.0],[0.0,0.0,1.0], [1.0,0.0,0.0]]
@@ -69,7 +72,7 @@ def viz_seg (verts, labels, path, device):
 
     sample_verts = verts.unsqueeze(0).repeat(30,1,1).to(torch.float).to(device)
     sample_labels = labels.unsqueeze(0).to(device)
-    sample_colors = torch.zeros((1,10000,3)).to(device)
+    sample_colors = torch.zeros((1,k,3)).to(device)
 
     # Colorize points based on segmentation labels
     for i in range(6):

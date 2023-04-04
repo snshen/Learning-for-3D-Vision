@@ -92,13 +92,13 @@ if __name__ == '__main__':
             test_accuracy = pred_label.eq(test_label.data).cpu().sum().item() / (test_label.reshape((-1,1)).size()[0])
             
             if test_accuracy>args.s_thresh and len(s_class) < 3:    
-                viz_seg(data, test_label, "{}/seg_s_gt_{}.gif".format(args.output_dir, len(s_class)), args.device)
-                viz_seg(data, pred_label, "{}/seg_s_pred_{}.gif".format(args.output_dir, len(s_class)), args.device)
+                viz_seg(data, test_label, "{}/seg_s_gt_{}.gif".format(args.output_dir, len(s_class)), args)
+                viz_seg(data, pred_label, "{}/seg_s_pred_{}.gif".format(args.output_dir, len(s_class)), args)
                 s_ind.append(i)
                 s_class.append(test_accuracy)
             if test_accuracy<args.f_thresh and len(f_class) < 3:
-                viz_seg(data, test_label, "{}/seg_f_gt_{}.gif".format(args.output_dir, len(f_class)), args.device)
-                viz_seg(data, pred_label, "{}/seg_f_pred_{}.gif".format(args.output_dir, len(f_class)), args.device)
+                viz_seg(data, test_label, "{}/seg_f_gt_{}.gif".format(args.output_dir, len(f_class)), args)
+                viz_seg(data, pred_label, "{}/seg_f_pred_{}.gif".format(args.output_dir, len(f_class)), args)
                 f_ind.append(i)
                 f_class.append(test_accuracy)
         print("Accuracies of success classes: ", s_class)
@@ -114,8 +114,7 @@ if __name__ == '__main__':
             test_label = test_labels[i]
             pred_label = pred_labels[i]
             test_accuracy = pred_label.eq(test_label.data).cpu().sum().item() / (test_label.reshape((-1,1)).size()[0])
-            viz_seg(data, test_label, "{}/seg_gt_{}.gif".format(args.output_dir, i), args.device)
-            viz_seg(data, pred_label, "{}/seg_pred_{}_{}.gif".format(args.output_dir, args.exp_name, i), args.device)
+            viz_seg(data, pred_label, "{}/seg_pred_{}_{}.gif".format(args.output_dir, args.exp_name, i), args)
             accuracies.append(test_accuracy)
         print("Accuracies of examples: ", accuracies)
     print ("test accuracy: {}".format(test_accuracy))

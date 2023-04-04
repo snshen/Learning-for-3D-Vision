@@ -63,6 +63,15 @@ As seen ***
 
 Next, I look at how rotation affects segmentation accuracy. I have also re-visualize "good" examples from Q2 and indicated their assiciated accuracy once rotated.
 
+|**Rotation**|**Accuracy**|Chairs|Vases|Lamps|
+|:-:|:-:|:-:|:-:|:-:|
+|0 rad| Ground truth|![](output/seg_s_gt_0.gif)|![](output/seg_s_gt_1.gif)|![](output/seg_s_gt_2.gif)|
+|0.2 rad|0.8276|Sample accuracy: 0.9121<br>![](output/seg_pred_rot2_0.gif)|Sample accuracy: 0.9768<br>![](output/seg_pred_rot2_1.gif)|Sample accuracy: 0.8276<br>![](output/seg_pred_rot2_2.gif)|
+|0.4 rad|0.7519|Sample accuracy: 0.9017<br>![](output/seg_pred_rot4_0.gif)|Sample accuracy: 0.9144<br>![](output/seg_pred_rot4_1.gif)|Sample accuracy: 0.7519<br>![](output/seg_pred_rot4_2.gif)|
+|0.6 rad|0.6397|Sample accuracy: 0.8682<br>![](output/seg_pred_rot6_0.gif)|Sample accuracy: 0.8491<br>![](output/seg_pred_rot6_1.gif)|Sample accuracy: 0.6397<br>![](output/seg_pred_rot6_2.gif)|
+|0.8 rad|0.5982|Sample accuracy: 0.819<br>![](output/seg_pred_rot8_0.gif)|Sample accuracy: 0.8239<br>![](output/seg_pred_rot8_1.gif)|Sample accuracy: 0.5982<br>![](output/seg_pred_rot8_2.gif)|
+|1 rad|0.488|Sample accuracy: 0.6968<br>![](output/seg_pred_rot10_0.gif)|Sample accuracy: 0.7617<br>![](output/seg_pred_rot10_1.gif)|Sample accuracy: 0.488<br>![](output/seg_pred_rot10_2.gif)|
+|1.2 rad|0.3231|Sample accuracy: 0.5949<br>![](output/seg_pred_rot12_0.gif)|Sample accuracy: 0.734<br>![](output/seg_pred_rot12_1.gif)|Sample accuracy: 0.3231<br>![](output/seg_pred_rot12_2.gif)|
 
 Accuracy and visualization on a few samples in comparison with my results from Q1 & Q2.
 
@@ -71,9 +80,28 @@ Provide some interpretation in a few sentences.
 
 ### Experiment 2: Number of Points 
 
-For this experiment, I will input a different number of points points per object (modify `--num_points` when evaluating models in `eval_cls.py` and `eval_seg.py`)
+For this experiment, I will input a different number of points points per object.
 
-Accuracy and visualization on a few samples in comparison with my results from Q1 & Q2.
+First, I look at how number of points affects classification accuracy. I have also re-visualize the successful examples from Q1 and indicate whether these specific examples succeed once number of points is changes.
+
+|**Number of Points**|**Accuracy**|Chairs|Vases|Lamps|
+|:-:|:-:|:-:|:-:|:-:|
+|1000 points|0.9790|successful<br>![](output/cls_s_0_0.gif)|successful<br>![](output/cls_s_1_1.gif)|successful<br>![](output/cls_s_2_2.gif)|
+|500 points|0.9675|successful<br>![](output/cls_num500_0_0.gif)|successful<br>![](output/cls_num500_1_1.gif)|successful<br>![](output/cls_num500_2_2.gif)|
+|100 points|0.9087|successful<br>![](output/cls_num100_0_0.gif)|successful<br>![](output/cls_num100_1_1.gif)|successful<br>![](output/cls_num100_2_2.gif)|
+|50 points|0.7555|successful<br>![](output/cls_num50_0_0.gif)|successful<br>![](output/cls_num50_1_1.gif)|successful<br>![](output/cls_num50_2_2.gif)|
+|10 points|0.2550|failure, predicted lamp<br>![](output/cls_num10_0_2.gif)|failure, predicted lamp<br>![](output/cls_num10_1_2.gif)|successful<br>![](output/cls_num10_2_2.gif)|
+|1 points|0.2455|failure, predicted lamp<br>![](output/cls_num1_0_2.gif)|failure, predicted lamp<br>![](output/cls_num1_1_2.gif)|successful<br>![](output/cls_num1_2_2.gif)|
+
+Next, I look at how number of points affects affects segmentation accuracy. I have also re-visualize "good" examples from Q2 and indicated their assiciated accuracy once number of points is changes.
+
+|**Number of Points**|**Accuracy**|Chairs|Vases|Lamps|
+|:-:|:-:|:-:|:-:|:-:|
+|1000 points| Ground truth|![](output/seg_s_gt_0.gif)|![](output/seg_s_gt_1.gif)|![](output/seg_s_gt_2.gif)|
+|500 points|0.87|Sample accuracy: 0.952<br>![](output/seg_pred_num500_0.gif)|Sample accuracy: 0.998<br>![](output/seg_pred_num500_1.gif)|Sample accuracy: 0.87<br>![](output/seg_pred_num500_2.gif)|
+|100 points|0.85|Sample accuracy: 0.92<br>![](output/seg_pred_num100_0.gif)|Sample accuracy: 0.99<br>![](output/seg_pred_num100_1.gif)|Sample accuracy: 0.85<br>![](output/seg_pred_num100_2.gif)|
+|50 points|0.78|Sample accuracy: 0.94<br>![](output/seg_pred_num50_0.gif)|Sample accuracy: 0.98<br>![](output/seg_pred_num50_1.gif)|Sample accuracy: 0.78<br>![](output/seg_pred_num50_2.gif)|
+|10 points|0.2|Sample accuracy: 0.5<br>![](output/seg_pred_num10_0.gif)|Sample accuracy: 1.0<br>![](output/seg_pred_num10_1.gif)|Sample accuracy: 0.2<br>![](output/seg_pred_num10_2.gif)|
 
 
 Provide some interpretation in a few sentences.
@@ -86,7 +114,10 @@ S indices:  [0, 1, 2]
 F indices:  [26, 41, 61]
 
 ## Q4. Expressive architectures (10 points + 20 bonus points)
+
+In this section I improve the base model performance by utilizing 
 Instead of using a vanilla PointNet, improve the base model using one of [PointNet++](https://arxiv.org/abs/1706.02413), or [DGCNN](https://arxiv.org/abs/1801.07829), or [Point Transformers](https://arxiv.org/abs/2012.09164). Your implementation need not leverage all details of these models (e.g. you can use different levels of hierarchy), but should borrow the key design principles and should allow some improvement over the base PointNet model.
+
 
 Deliverables: On your website, 
 
