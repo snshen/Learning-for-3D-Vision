@@ -4,7 +4,7 @@ import argparse
 from torch.utils.data import DataLoader
 
 import torch
-from models import cls_model
+from models import cls_model, trans_cls_model
 from utils import create_dir, viz_cloud
 
 from pytorch3d.transforms import Rotate
@@ -30,6 +30,9 @@ def create_parser():
     parser.add_argument('--exp_name', type=str, default="exp", help='The name of the experiment')
     parser.add_argument('--rotate', type=float, default=None, help='Rotates input about x axis by value if given')
 
+    parser.add_argument('--transform', action='store_true', help='Use flag if evaluating transform model')
+
+
 
     return parser
 
@@ -42,10 +45,15 @@ if __name__ == '__main__':
     create_dir(args.output_dir)
 
     # ------ TO DO: Initialize Model for Classification Task ------
-    model = cls_model()
+    if args.transform:
+        model = trans_cls_model()
+        model_path = './checkpoints/trans_cls/{}.pt'.format(args.load_checkpoint)
+    else:
+        model = cls_model()
+        model_path = './checkpoints/cls/{}.pt'.format(args.load_checkpoint)
     
     # Load Model Checkpoint
-    model_path = './checkpoints/cls/{}.pt'.format(args.load_checkpoint)
+    
     with open(model_path, 'rb') as f:
         state_dict = torch.load(f, map_location=args.device)
         model.load_state_dict(state_dict)

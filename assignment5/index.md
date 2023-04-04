@@ -5,7 +5,7 @@ Number of late days used:
 
 ## Q1. Classification Model (40 points)
 
-After training my model for 110 epochs, the best model was saved at epoch 150   and the test accuracy of my best model was 0.9790
+After training my model for 250 epochs, the best model was saved at epoch 170 and the test accuracy of my best model was 0.9790
 
 Visualization of successful predictions:
 
@@ -115,14 +115,21 @@ F indices:  [26, 41, 61]
 
 ## Q4. Expressive architectures (10 points + 20 bonus points)
 
-In this section I improve the base model performance by utilizing 
-Instead of using a vanilla PointNet, improve the base model using one of [PointNet++](https://arxiv.org/abs/1706.02413), or [DGCNN](https://arxiv.org/abs/1801.07829), or [Point Transformers](https://arxiv.org/abs/2012.09164). Your implementation need not leverage all details of these models (e.g. you can use different levels of hierarchy), but should borrow the key design principles and should allow some improvement over the base PointNet model.
+In this section I improve the base model performance by implementing transformation blocks and utilizing skip connections in a similar way [Point Transformers](https://arxiv.org/abs/2012.09164). 
+
+After training my classification model for 250 epochs, the best model was saved at epoch 154 with an accuracy of 0.9811 which is a slight improvement over my original model (0.9790).
+
+When looking at my examples from Q1, the successful predictions remained the same:
+
+|**Class**|Chairs|Vases|Lamps|
+|:-:|:-:|:-:|:-:|
+|**Prediction**|Chairs|Vases|Lamps|
+|**Point Cloud**|![](output/cls_s_0_0.gif)|![](output/cls_s_1_1.gif)|![](output/cls_s_2_2.gif)|
+
+And the new model was able to successfully predict one example (leftmost) that it was previously unable to predict correctly:
+|**Class**|Chairs|Vases|Lamps|
+|:-:|:-:|:-:|:-:|
+|**Prediction**|Chairs|Lamps|Vases|
+|**Point Cloud**|![](output/cls_f_0_2.gif)|![](output/cls_f_1_2.gif)|![](output/cls_f_2_1.gif)|
 
 
-Deliverables: On your website, 
-
-- Describe the model you have implemented.
-- For each task, report the test accuracy of your best model, in comparison with your results from Q1 & Q2.
-- Visualize results in comparison to ones obtained in the earlier parts.
-
-Note that you need to implement **at least one** of the above locality methods. That will be of worth 10 points. Each extra implemented method will be of worth 10 bonus points each. 
