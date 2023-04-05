@@ -2,7 +2,7 @@ import numpy as np
 import argparse
 
 import torch
-from models import seg_model
+from models import seg_model, trans_seg_model
 from data_loader import get_data_loader
 from utils import create_dir, viz_seg
 
@@ -33,6 +33,8 @@ def create_parser():
 
 
     parser.add_argument('--rotate', type=float, default=None, help='Rotates input about x axis by value if given')
+    parser.add_argument('--transform', action='store_true', help='Use flag if evaluating transform model')
+
 
     return parser
 
@@ -45,10 +47,14 @@ if __name__ == '__main__':
     create_dir(args.output_dir)
 
     # ------ TO DO: Initialize Model for Segmentation Task  ------
-    model = seg_model(args.num_seg_class)
+    if args.transform:
+        model = trans_seg_model(args.num_seg_class)
+        model_path = './checkpoints/trans_seg/{}.pt'.format(args.load_checkpoint)
+    else:
+        model = seg_model(args.num_seg_class)
+        model_path = './checkpoints/seg/{}.pt'.format(args.load_checkpoint)
     
     # Load Model Checkpoint
-    model_path = './checkpoints/seg/{}.pt'.format(args.load_checkpoint)
     with open(model_path, 'rb') as f:
         state_dict = torch.load(f, map_location=args.device)
         model.load_state_dict(state_dict)
@@ -80,7 +86,7 @@ if __name__ == '__main__':
     
     pred_labels = torch.cat(pred_labels)
 
-    test_accuracy = pred_labels.eq(test_labels.data).cpu().sum().item() / (test_labels.reshape((-1,1)).size()[0])
+    total_test_accuracy = pred_labels.eq(test_labels.data).cpu().sum().item() / (test_labels.reshape((-1,1)).size()[0])
     
     if args.indices == None: 
         s_class = []
@@ -117,7 +123,7 @@ if __name__ == '__main__':
             viz_seg(data, pred_label, "{}/seg_pred_{}_{}.gif".format(args.output_dir, args.exp_name, i), args)
             accuracies.append(test_accuracy)
         print("Accuracies of examples: ", accuracies)
-    print ("test accuracy: {}".format(test_accuracy))
+    print ("test accuracy: {}".format(total_test_accuracy))
 
     # # Visualize Segmentation Result (Pred VS Ground Truth)
     # viz_seg(test_data[args.i], test_label[args.i], "{}/gt_{}.gif".format(args.output_dir, args.exp_name), args.device)

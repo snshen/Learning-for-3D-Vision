@@ -24,7 +24,7 @@ interpretation in a few sentences.
 
 ## Q2. Segmentation Model (40 points) 
 
-After training my model for 250 epochs, the best model was saved at epoch 160 and the test accuracy of my best model was 0.9872.
+After training my model for 250 epochs, the best model was saved at epoch 160 and the test accuracy of my best model was 0.9001.
 
 Visualization of good predictions:
 
@@ -117,7 +117,7 @@ F indices:  [26, 41, 61]
 
 In this section I improve the base model performance by implementing transformation blocks and utilizing skip connections in a similar way [Point Transformers](https://arxiv.org/abs/2012.09164). 
 
-After training my classification model for 250 epochs, the best model was saved at epoch 154 with an accuracy of 0.9811 which is a slight improvement over my original model (0.9790).
+After training my classification model for 250 epochs, the best model was saved at epoch 154 with an accuracy of 0.9811 which is an improvement over my original model (0.9790).
 
 When looking at my examples from Q1, the successful predictions remained the same:
 
@@ -132,4 +132,23 @@ And the new model was able to successfully predict one example (leftmost) that i
 |**Prediction**|Chairs|Lamps|Vases|
 |**Point Cloud**|![](output/cls_f_0_2.gif)|![](output/cls_f_1_2.gif)|![](output/cls_f_2_1.gif)|
 
+
+Similarly, I trained my segmentation model for 250 epochs, the best model was saved at epoch 213 with an accuracy of 0.9091 which is an improvement over my original model (0.9001).
+
+
+|:-:|:-:|:-:|:-:|
+
+|**New Accuracy**|0.9546|0.9884|0.8698|
+|:-:|:-:|:-:|:-:|
+|**Original Accuracy**|0.9373|0.9854|0.9044|
+|**New Predicted**|![](output/seg_pred_exp_0.gif)|![](output/seg_pred_exp_1.gif)|![](output/seg_pred_exp_2.gif)|
+|**Original Predicted**|![](output/seg_s_pred_0.gif)|![](output/seg_s_pred_1.gif)|![](output/seg_s_pred_2.gif)|
+
+Visualization of bad predictions:
+
+|**New Accuracy**|0.5627|0.9041|0.4964|
+|:-:|:-:|:-:|:-:|
+|**Original Accuracy**|0.5212|0.6654|0.5931|
+|**New Predicted**|![](output/seg_pred_exp_26.gif)|![](output/seg_pred_exp_41.gif)|![](output/seg_pred_exp_61.gif)|
+|**Original Predicted**|![](output/seg_f_pred_0.gif)|![](output/seg_f_pred_1.gif)|![](output/seg_f_pred_2.gif)|
 

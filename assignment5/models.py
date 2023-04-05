@@ -7,10 +7,11 @@ import numpy as np
 class FeatNet(nn.Module):
     def __init__(self, global_feat = False, transform=False):
         super(FeatNet, self).__init__()
-        self.trans1 = trans()
+        if transform:
+            self.trans1 = trans()
+            self.trans2 = trans(input=64)
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
         self.bn1 = nn.BatchNorm1d(64)
-        self.trans2 = trans(input=64)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.bn2 = nn.BatchNorm1d(128)
         self.conv3 = torch.nn.Conv1d(128, 1024, 1)
